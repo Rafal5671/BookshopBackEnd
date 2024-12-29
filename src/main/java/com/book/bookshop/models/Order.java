@@ -1,11 +1,15 @@
 package com.book.bookshop.models;
 
+import com.book.bookshop.enums.OrderType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "Orders")
@@ -16,6 +20,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer orderId;
 
+    @Enumerated(EnumType.STRING)
+    private OrderType orderType;
+
     @ManyToOne
     @JoinColumn(name = "customer_id")
     private Customer customer;
@@ -24,12 +31,17 @@ public class Order {
     @JoinColumn(name = "address_id")
     private Address address;
 
-    @Column(name = "order_date")
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items = new ArrayList<>();
+
+    @Column(name = "order_date", updatable = false)
+    @CreationTimestamp
     private LocalDateTime orderDate;
 
-    private String status;
+    private String status = "pending";
     private BigDecimal amount;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
+    @CreationTimestamp
     private LocalDateTime createdAt;
 }

@@ -24,6 +24,8 @@ repositories {
 }
 
 dependencies {
+    implementation 'org.postgresql:postgresql:42.7.2'
+    implementation 'org.jboss.logging:jboss-logging:3.4.3.Final'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -31,6 +33,10 @@ dependencies {
     implementation 'org.springframework.security:spring-security-core'
     implementation 'org.springframework.security:spring-security-config'
     implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    implementation 'javax.servlet:javax.servlet-api:4.0.1'
+    implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.postgresql:postgresql'
