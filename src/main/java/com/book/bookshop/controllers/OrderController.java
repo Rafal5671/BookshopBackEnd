@@ -1,4 +1,5 @@
 package com.book.bookshop.controllers;
+import com.book.bookshop.enums.OrderStatus;
 import com.book.bookshop.enums.OrderType;
 import com.book.bookshop.models.Address;
 import com.book.bookshop.models.Customer;
@@ -81,6 +82,7 @@ public class OrderController {
             Order order = new Order();
             order.setCustomer(customer);
             order.setAmount(new BigDecimal(orderData.get("amount").toString()));
+            order.setStatus(OrderStatus.PENDING);
             order.setAddress(savedAddress);
             order.setOrderType(OrderType.REGISTERED_USER);
             Order savedOrder = orderService.save(order);

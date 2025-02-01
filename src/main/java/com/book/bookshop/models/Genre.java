@@ -19,7 +19,11 @@ public class Genre {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer genreId;
     private String name;
-
+    private String nameEn;
     @ManyToMany(mappedBy = "genres")
     private List<Book> books;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id", nullable = false) // Ensures all genres have categories
+    private Category category;
 }

@@ -1,5 +1,7 @@
 package com.book.bookshop.service;
 
+import com.book.bookshop.models.Book;
+import com.book.bookshop.models.Customer;
 import com.book.bookshop.models.Review;
 import com.book.bookshop.repo.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,5 +30,12 @@ public class ReviewService {
     public void deleteById(Integer id) {
         reviewRepository.deleteById(id);
     }
+    public Review findByBookAndCustomer(Book book, Customer customer) {
+        return reviewRepository.findByBookAndCustomer(book, customer);
+    }
+    public List<Review> findByBook(Book book) {
+        return reviewRepository.findByBook(book);
+    }
+
 }
 

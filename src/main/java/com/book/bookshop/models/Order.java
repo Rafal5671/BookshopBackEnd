@@ -1,5 +1,6 @@
 package com.book.bookshop.models;
 
+import com.book.bookshop.enums.OrderStatus;
 import com.book.bookshop.enums.OrderType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -38,7 +39,9 @@ public class Order {
     @CreationTimestamp
     private LocalDateTime orderDate;
 
-    private String status = "pending";
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
+
     private BigDecimal amount;
 
     @Column(name = "created_at", updatable = false)

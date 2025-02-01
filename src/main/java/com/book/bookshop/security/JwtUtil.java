@@ -21,11 +21,13 @@ public class JwtUtil {
 
     // Metoda do pobierania nazwy użytkownika z tokena
     public String extractUsername(String token) {
-        return Jwts.parser()
+        String email = Jwts.parser()
                 .setSigningKey(secretKey)
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+        System.out.println("Decoded email: " + email);
+        return email;
     }
 
     // Metoda do walidacji tokena

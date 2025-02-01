@@ -11,6 +11,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -44,13 +45,16 @@ public class Book {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
     @ManyToMany
     @JoinTable(
             name = "BookAuthor",
             joinColumns = @JoinColumn(name = "book_id"),
             inverseJoinColumns = @JoinColumn(name = "author_id"))
-    private List<Author> authors;
+    private List<Author> authors =  new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "publisher_id")
@@ -74,5 +78,8 @@ public class Book {
             name = "BookGenre",  // Tabela pośrednicząca
             joinColumns = @JoinColumn(name = "book_id"),
             inverseJoinColumns = @JoinColumn(name = "genre_id"))
-    private List<Genre> genres;
+    private List<Genre> genres =  new ArrayList<>();
+
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews =  new ArrayList<>();
 }

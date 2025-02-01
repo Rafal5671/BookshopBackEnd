@@ -19,8 +19,8 @@ public class Review {
     @JoinColumn(name = "book_id")
     private Book book;
 
-    @ManyToOne
-    @JoinColumn(name = "customer_id")
+    @ManyToOne(fetch = FetchType.LAZY) // Relacja wiele-recenzji -> jeden-użytkownik
+    @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
     private Integer rating;

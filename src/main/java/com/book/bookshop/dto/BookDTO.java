@@ -34,5 +34,7 @@ public class BookDTO {
     private LocalDateTime releaseDate;
     private PublisherDTO publisher;
     private List<AuthorDTO> authors;
+    private List<ReviewProductDTO> reviews;
+
 }
 

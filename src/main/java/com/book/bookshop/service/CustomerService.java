@@ -2,6 +2,7 @@ package com.book.bookshop.service;
 
 import com.book.bookshop.models.Customer;
 import com.book.bookshop.repo.CustomerRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -31,5 +32,10 @@ public class CustomerService {
 
     public Customer findByEmail(String email) {
         return customerRepository.findByEmail(email);
+    }
+    @Transactional
+    public Customer loadFullProfile(String email) {
+        // Zapytanie z JOIN FETCH
+        return customerRepository.findByEmailWithOrdersAndReviews(email);
     }
 }

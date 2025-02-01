@@ -1,8 +1,12 @@
 package com.book.bookshop.security;
 
+import com.book.bookshop.models.Customer;
+import com.book.bookshop.repo.CustomerRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -10,13 +14,26 @@ import java.util.ArrayList;
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
 
-    @Override
-    public UserDetails loadUserByUsername(String username) {
-        // Załaduj użytkownika z bazy danych (tutaj tylko przykładowe dane)
-        return new User("user", "password", new ArrayList<>());
-    }
+    @Autowired
+    private CustomerRepository customerRepository;  // Twoje repo
 
-    public boolean authenticate(String username, String password) {
-        return "user".equals(username) && "password".equals(password);
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // Szukamy klienta po emailu
+        Customer customer = customerRepository.findByEmail(username);
+        if (customer == null) {
+            throw new UsernameNotFoundException("User not found with email: " + username);
+        }
+
+
+        // Zwracamy obiekt, który Spring Security rozpozna.
+        // Można np. użyć buildera z klasy User (z Spring Security):
+        return User
+                .withUsername(customer.getEmail())
+                .password(customer.getPassword())
+                // getAuthorities() z encji Customer może zwracać np. listę ról/pojedynczą rolę
+                .authorities(customer.getAuthorities())
+                .build();
     }
 }
+

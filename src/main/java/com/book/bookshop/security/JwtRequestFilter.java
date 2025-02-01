@@ -1,9 +1,13 @@
 package com.book.bookshop.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -13,6 +17,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.ArrayList;
+
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,37 +33,47 @@ public class JwtRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        String path = request.getRequestURI();
-        System.out.println("Request URI: " + path);
-
-        // Pomijamy publiczne endpointy
-        if (path.startsWith("/api/books") || path.startsWith("/api/customers/login") || path.startsWith("/api/customers/register")) {
-            System.out.println("Public endpoint, skipping authentication: " + path);
-            chain.doFilter(request, response);
-            return;
-        }
-        // Pobieramy token z nagłówka "Authorization"
-        String token = request.getHeader("Authorization");
+        String requestURI = request.getRequestURI();
+        String method = request.getMethod();
+        System.out.println("JwtRequestFilter triggered for: " + method + " " + requestURI);
+        String token = null;
         String username = null;
 
-        // Jeśli token zaczyna się od "Bearer ", wyciągamy token
-        if (token != null && token.startsWith("Bearer ")) {
-            token = token.substring(7); // Usuwamy "Bearer " z tokenu
-            username = jwtUtil.extractUsername(token); // Pobieramy username (email) z tokenu
+        // Pobieranie tokenu z nagłówka
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            token = authHeader.substring(7);
+            try {
+                username = jwtUtil.extractUsername(token);
+            } catch (ExpiredJwtException e) {
+                logger.warn("Token expired");
+            } catch (MalformedJwtException e) {
+                logger.warn("Invalid token");
+            } catch (Exception e) {
+                logger.warn("Token processing error: " + e.getMessage());
+            }
         }
 
+        // Ustawiamy Authentication, jeśli token jest ważny
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            var userDetails = userDetailsService.loadUserByUsername(username);
+            // Załaduj dane użytkownika
+            UserDetails userDetails = userDetailsService.loadUserByUsername(username); // Tworzymy obiekt UserDetails z e-mailem jako username
 
-            // Jeśli token jest poprawny, ustawiamy autentykację
             if (jwtUtil.validateToken(token, username)) {
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
 
-        chain.doFilter(request, response); // Kontynuujemy przetwarzanie łańcucha filtrów
+
+        // Kontynuacja łańcucha filtrów
+        chain.doFilter(request, response);
     }
 }
+
 

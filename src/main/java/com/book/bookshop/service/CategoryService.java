@@ -26,4 +26,8 @@ public class CategoryService {
     public void deleteById(Integer id) {
         categoryRepository.deleteById(id);
     }
+
+    public List<Category> findAllCategories() {
+        return categoryRepository.findAll();
+    }
 }
