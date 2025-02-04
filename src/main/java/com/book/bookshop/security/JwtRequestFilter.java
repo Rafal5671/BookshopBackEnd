@@ -47,10 +47,19 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 username = jwtUtil.extractUsername(token);
             } catch (ExpiredJwtException e) {
                 logger.warn("Token expired");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401 Unauthorized
+                response.getWriter().write("Token expired");
+                return;
             } catch (MalformedJwtException e) {
                 logger.warn("Invalid token");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Invalid token");
+                return;
             } catch (Exception e) {
                 logger.warn("Token processing error: " + e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Token processing error");
+                return;
             }
         }
 

@@ -1,6 +1,6 @@
 package com.book.bookshop.mapper;
 
-import com.book.bookshop.dto.CustomerDTO;
+import com.book.bookshop.dto.customer.CustomerDTO;
 import com.book.bookshop.models.Customer;
 
 public class CustomerMapper {

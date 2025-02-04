@@ -44,6 +44,12 @@ public class Order {
 
     private BigDecimal amount;
 
+    @Column(name = "payment_intent_id")
+    private String paymentIntentId;
+
+    @Column(name = "session_id")
+    private String sessionId;
+
     @Column(name = "created_at", updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

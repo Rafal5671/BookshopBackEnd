@@ -1,7 +1,7 @@
 package com.book.bookshop.controllers;
 
-import com.book.bookshop.dto.CustomerDTO;
-import com.book.bookshop.dto.CustomerProfileDTO;
+import com.book.bookshop.dto.customer.CustomerDTO;
+import com.book.bookshop.dto.customer.CustomerProfileDTO;
 import com.book.bookshop.mapper.CustomerMapper;
 import com.book.bookshop.mapper.CustomerProfileMapper;
 import com.book.bookshop.models.Customer;
@@ -24,9 +24,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 @RestController
 @RequestMapping("/api/customers")
 @CrossOrigin(origins = "http://localhost:3000")
-@Slf4j
 public class CustomerController {
-    private static final Logger logger = LoggerFactory.getLogger(CustomerController.class);
     @Autowired
     private JwtUtil jwtUtil;
     @Autowired
@@ -78,27 +76,22 @@ public class CustomerController {
 
     @GetMapping("/me")
     public ResponseEntity<CustomerDTO> getCustomerProfile(@AuthenticationPrincipal UserDetails userDetails) {
-        System.out.println("Lets goooooo");
         String email = userDetails.getUsername();
-        System.out.println(email);
         Customer customer = customerService.findByEmail(email);
 
         if (customer == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
 
-        // Mapa encję Customer -> DTO
         CustomerDTO customerDto = CustomerMapper.toDto(customer);
         return ResponseEntity.ok(customerDto);
     }
     @GetMapping("/profile/me")
     public ResponseEntity<CustomerProfileDTO> getUserProfile(@AuthenticationPrincipal UserDetails userDetails) {
-        // Upewniamy się, że userDetails nie jest null (czyli że użytkownik jest zalogowany)
         if (userDetails == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Pobieramy email z userDetails
         String email = userDetails.getUsername();
         Customer customer = customerService.findByEmail(email);
 
@@ -106,9 +99,7 @@ public class CustomerController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
-        // Maper zamienia obiekt Customer + powiązane listy na UserProfileDto
         CustomerProfileDTO dto = userProfileMapper.toUserProfileDto(customer);
-        logger.info("Mapa profilu użytkownika: {}", dto);
         return ResponseEntity.ok(dto);
     }
 }

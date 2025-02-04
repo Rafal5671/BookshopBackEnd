@@ -1,12 +1,25 @@
 package com.book.bookshop.controllers;
 
 import com.book.bookshop.dto.*;
+import com.book.bookshop.dto.admin.authors.AuthorDTO;
+import com.book.bookshop.dto.admin.category.CategoryAdminDTO;
+import com.book.bookshop.dto.admin.customer.CustomerAdminDTO;
+import com.book.bookshop.dto.admin.product.BookAdminDTO;
+import com.book.bookshop.dto.admin.publisher.PublisherAdminDTO;
+import com.book.bookshop.dto.admin.requests.create.CreateAuthorRequest;
+import com.book.bookshop.dto.admin.requests.create.CreateBookRequest;
+import com.book.bookshop.dto.admin.requests.create.CreateCategoryRequest;
+import com.book.bookshop.dto.admin.requests.create.CreatePublisherRequest;
+import com.book.bookshop.dto.admin.requests.update.UpdateBookRequest;
+import com.book.bookshop.dto.admin.requests.update.UpdateCategoryRequest;
+import com.book.bookshop.dto.admin.requests.update.UpdateOrderStatusRequest;
+import com.book.bookshop.dto.response.PagedResponse;
+import com.book.bookshop.dto.review.ReviewProductDTO;
 import com.book.bookshop.enums.CoverType;
 import com.book.bookshop.enums.LanguageBook;
 import com.book.bookshop.models.*;
 import com.book.bookshop.repo.*;
 import com.book.bookshop.service.AuthorService;
-import com.book.bookshop.service.CustomerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,7 +27,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -78,8 +90,8 @@ public class AdminController {
             publisherDTO = new PublisherAdminDTO(book.getPublisher().getPublisherId(), book.getPublisher().getName());
         }
 
-        List<AuthorCreateDTO> authorsDTO = book.getAuthors().stream()
-                .map(author -> new AuthorCreateDTO(author.getAuthorId(), author.getFirstName(), author.getLastName()))
+        List<AuthorDTO> authorsDTO = book.getAuthors().stream()
+                .map(author -> new AuthorDTO(author.getAuthorId(), author.getFirstName(), author.getLastName()))
                 .collect(Collectors.toList());
 
         List<ReviewProductDTO> reviewsDTO = book.getReviews().stream()
@@ -132,14 +144,14 @@ public class AdminController {
         );
     }
     @GetMapping("/authors")
-    public PagedResponse<AuthorCreateDTO> getAuthorsPage(@RequestParam(defaultValue = "0") int page,
-                                       @RequestParam(defaultValue = "5") int size) {
+    public PagedResponse<AuthorDTO> getAuthorsPage(@RequestParam(defaultValue = "0") int page,
+                                                   @RequestParam(defaultValue = "5") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("authorId").ascending());
         Page<Author> pageResult = authorService.findAll(pageable);
 
         // Mapowanie encji Author na AuthorDTO
-        List<AuthorCreateDTO> authors = pageResult.getContent().stream()
-                .map(author -> new AuthorCreateDTO(author.getAuthorId(), author.getFirstName(), author.getLastName()))
+        List<AuthorDTO> authors = pageResult.getContent().stream()
+                .map(author -> new AuthorDTO(author.getAuthorId(), author.getFirstName(), author.getLastName()))
                 .toList();
 
         // Zwróć dane w opakowaniu PagedResponse
@@ -152,7 +164,7 @@ public class AdminController {
         );
     }
     @GetMapping("/authors/search")
-    public PagedResponse<AuthorCreateDTO> searchAuthors(
+    public PagedResponse<AuthorDTO> searchAuthors(
             @RequestParam String query,
             @RequestParam int page,
             @RequestParam int size) {
@@ -160,7 +172,7 @@ public class AdminController {
         Page<Author> pageResult = authorRepository.findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
                 query, query, pageable);
 
-        List<AuthorCreateDTO> dtoList = pageResult.getContent().stream()
+        List<AuthorDTO> dtoList = pageResult.getContent().stream()
                 .map(this::convertToAuthorDTO)
                 .collect(Collectors.toList());
 
@@ -174,8 +186,8 @@ public class AdminController {
     }
 
     // Metoda pomocnicza do konwersji encji Author -> AuthorDTO
-    private AuthorCreateDTO convertToAuthorDTO(Author author) {
-        return new AuthorCreateDTO(
+    private AuthorDTO convertToAuthorDTO(Author author) {
+        return new AuthorDTO(
                 author.getAuthorId(),
                 author.getFirstName(),
                 author.getLastName()
@@ -251,7 +263,7 @@ public class AdminController {
     }
 
     @PostMapping("/authors")
-    public ResponseEntity<AuthorCreateDTO> addAuthor(@RequestBody CreateAuthorRequest request) {
+    public ResponseEntity<AuthorDTO> addAuthor(@RequestBody CreateAuthorRequest request) {
         try {
             // 1. Utwórz nową encję Author
             Author author = new Author();
@@ -263,7 +275,7 @@ public class AdminController {
             Author savedAuthor = authorRepository.save(author);
 
             // 3. Przygotuj AuthorDTO do zwrócenia
-            AuthorCreateDTO authorDTO = new AuthorCreateDTO(
+            AuthorDTO authorDTO = new AuthorDTO(
                     savedAuthor.getAuthorId(),
                     savedAuthor.getFirstName(),
                     savedAuthor.getLastName()
@@ -545,7 +557,7 @@ public class AdminController {
     }
     @GetMapping("/users")
     public PagedResponse<CustomerAdminDTO> getUsers(@RequestParam(defaultValue = "0") int page,
-                                               @RequestParam(defaultValue = "12") int size) {
+                                                    @RequestParam(defaultValue = "12") int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Customer> customerPage = userRepository.findAll(pageable);
 
@@ -609,7 +621,7 @@ public class AdminController {
             Category savedCategory = categoryRepository.save(category);
 
             // Konwersja na DTO
-            CategoryDTO categoryDTO = convertToCategoryDTO(savedCategory);
+            CategoryAdminDTO categoryDTO = convertToCategoryDTO(savedCategory);
 
             return new ResponseEntity<>(categoryDTO, HttpStatus.CREATED);
 
@@ -661,7 +673,7 @@ public class AdminController {
             Category updatedCategory = categoryRepository.save(category);
 
             // Konwersja na DTO
-            CategoryDTO categoryDTO = convertToCategoryDTO(updatedCategory);
+            CategoryAdminDTO categoryDTO = convertToCategoryDTO(updatedCategory);
 
             return new ResponseEntity<>(categoryDTO, HttpStatus.OK);
 
@@ -710,14 +722,14 @@ public class AdminController {
 
     // 4. Pobieranie Listy Kategorii (opcjonalnie z paginacją)
     @GetMapping("/categories")
-    public PagedResponse<CategoryDTO> getCategories(
+    public PagedResponse<CategoryAdminDTO> getCategories(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("categoryId").ascending());
         Page<Category> categoryPage = categoryRepository.findAll(pageable);
 
-        List<CategoryDTO> categoryDTOs = categoryPage.getContent().stream()
+        List<CategoryAdminDTO> categoryDTOs = categoryPage.getContent().stream()
                 .map(this::convertToCategoryDTO)
                 .collect(Collectors.toList());
 
@@ -741,7 +753,7 @@ public class AdminController {
                 return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
             }
 
-            CategoryDTO categoryDTO = convertToCategoryDTO(categoryOpt.get());
+            CategoryAdminDTO categoryDTO = convertToCategoryDTO(categoryOpt.get());
             return new ResponseEntity<>(categoryDTO, HttpStatus.OK);
 
         } catch (Exception e) {
@@ -753,13 +765,8 @@ public class AdminController {
     }
 
     // Metoda pomocnicza do konwersji encji Category -> CategoryDTO
-    private CategoryDTO convertToCategoryDTO(Category category) {
-        return new CategoryDTO(
-                category.getCategoryId(),
-                category.getNameEn(),
-                category.getNamePl(),
-                category.getCreatedAt()
-        );
+    private CategoryAdminDTO convertToCategoryDTO(Category category) {
+        return new CategoryAdminDTO(category);
     }
 
 }

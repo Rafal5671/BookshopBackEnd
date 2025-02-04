@@ -1,5 +1,4 @@
-package com.book.bookshop.security;
-
+package com.book.bookshop.dto.admin.publisher;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,6 +8,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthResponse {
-    private String token;
+public class PublisherAdminDTO {
+    private Integer publisherId;
+    private String name;
 }

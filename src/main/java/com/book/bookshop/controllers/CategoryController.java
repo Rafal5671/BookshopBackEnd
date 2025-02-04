@@ -1,7 +1,6 @@
 package com.book.bookshop.controllers;
 
-import com.book.bookshop.dto.CategoryDTO;
-import com.book.bookshop.dto.CategoryGetDTO;
+import com.book.bookshop.dto.admin.category.CategoryDTO;
 import com.book.bookshop.dto.GenreDTO;
 import com.book.bookshop.models.Category;
 import com.book.bookshop.models.Genre;
@@ -20,27 +19,29 @@ import java.util.List;
 public class CategoryController {
     @Autowired
     private CategoryService categoryService;
+
     @Autowired
     private GenreService genreService;
+
     @GetMapping
-    public List<CategoryDTO> getAllCategories() {
-        return categoryService.findAll()
-                .stream()
-                .map(this::convertToDTO)
+    public ResponseEntity<List<CategoryDTO>> getAllCategories(
+            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, defaultValue = "pl") String language
+    ) {
+        List<Category> categories = categoryService.findAll();
+        List<CategoryDTO> dtos = categories.stream()
+                .map(cat -> new CategoryDTO(cat, language))
                 .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dtos);
     }
-    private CategoryDTO convertToDTO(Category category) {
-        return new CategoryDTO(
-                category.getCategoryId(),
-                category.getNameEn(),
-                category.getNamePl(),
-                category.getCreatedAt()
-        );
-    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<Category> getCategoryById(@PathVariable Integer id) {
+    public ResponseEntity<CategoryDTO> getCategoryById(
+            @PathVariable Integer id,
+            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, defaultValue = "pl") String language
+    ) {
         return categoryService.findById(id)
-                .map(ResponseEntity::ok)
+                .map(category -> ResponseEntity.ok(new CategoryDTO(category, language)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -50,7 +51,8 @@ public class CategoryController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Category> updateCategory(@PathVariable Integer id, @RequestBody Category category) {
+    public ResponseEntity<Category> updateCategory(@PathVariable Integer id,
+                                                   @RequestBody Category category) {
         if (categoryService.findById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -70,32 +72,17 @@ public class CategoryController {
     @GetMapping("/genres/{categoryId}")
     public ResponseEntity<List<GenreDTO>> getGenresByCategoryId(
             @PathVariable Integer categoryId,
-            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, defaultValue = "pl") String language) {
+            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, defaultValue = "pl") String language
+    ) {
         List<Genre> genres = genreService.findGenresByCategoryId(categoryId);
 
-        // Określamy, które pole zwrócić na podstawie języka
         List<GenreDTO> genreDTOs = genres.stream()
                 .map(genre -> new GenreDTO(
                         genre.getGenreId(),
-                        language.startsWith("pl") ? genre.getName() : genre.getNameEn()
+                        language.startsWith("en") ? genre.getNameEn() : genre.getName()
                 ))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(genreDTOs);
-    }
-    @GetMapping("/categories")
-    public ResponseEntity<List<CategoryGetDTO>> getCategories(
-            @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, defaultValue = "pl") String language) {
-
-        List<Category> categories = categoryService.findAllCategories();
-
-        List<CategoryGetDTO> categoryDTOs = categories.stream()
-                .map(category -> new CategoryGetDTO(
-                        category.getCategoryId(),
-                        language.startsWith("pl") ? category.getNamePl() : category.getNameEn()
-                ))
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(categoryDTOs);
     }
 }

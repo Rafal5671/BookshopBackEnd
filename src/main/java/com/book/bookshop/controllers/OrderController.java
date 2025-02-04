@@ -11,10 +11,17 @@ import com.book.bookshop.security.JwtUtil;
 import com.book.bookshop.service.CustomerService;
 import com.book.bookshop.service.OrderItemService;
 import com.book.bookshop.service.OrderService;
+import com.stripe.Stripe;
+import com.stripe.exception.StripeException;
+import com.stripe.model.PaymentIntent;
+import com.stripe.param.PaymentIntentCreateParams;
+import com.stripe.param.checkout.SessionCreateParams;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.stripe.model.checkout.Session;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -36,6 +43,8 @@ public class OrderController {
     private AddressRepository addressRepository;
     @Autowired
     private CustomerService customerService;
+    @Value("${stripe.secret.key}")
+    private String stripeSecretKey;
     @GetMapping
     public List<Order> getAllOrders() {
         return orderService.findAll();
@@ -56,19 +65,19 @@ public class OrderController {
         order.setOrderId(id);
         return ResponseEntity.ok(orderService.save(order));
     }
+
     @PostMapping
-    public ResponseEntity<Order> createOrder(
+    public ResponseEntity<?> createOrder(
             @RequestHeader("Authorization") String authHeader,
             @RequestBody Map<String, Object> orderData) {
         try {
             String token = authHeader.substring(7);
-
             String email = jwtUtil.extractUsername(token);
 
             Customer customer = customerService.findByEmail(email);
-
             if (customer == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Nie znaleziono użytkownika o podanym emailu.");
             }
 
             Map<String, String> addressData = (Map<String, String>) orderData.get("address");
@@ -76,7 +85,6 @@ public class OrderController {
             address.setStreet(addressData.get("street"));
             address.setPostalCode(addressData.get("postalCode"));
             address.setCity(addressData.get("city"));
-
             Address savedAddress = addressRepository.save(address);
 
             Order order = new Order();
@@ -85,27 +93,67 @@ public class OrderController {
             order.setStatus(OrderStatus.PENDING);
             order.setAddress(savedAddress);
             order.setOrderType(OrderType.REGISTERED_USER);
+
             Order savedOrder = orderService.save(order);
 
-            // Dodawanie pozycji zamówienia
             List<Map<String, Object>> items = (List<Map<String, Object>>) orderData.get("items");
             for (Map<String, Object> itemData : items) {
                 OrderItem item = new OrderItem();
-                item.setBook(bookRepository.findById((Integer) itemData.get("bookId")).orElseThrow());
-                item.setQuantity((Integer) itemData.get("quantity"));
+                int bookId = (Integer) itemData.get("bookId");
+                int quantity = (Integer) itemData.get("quantity");
+
+                item.setBook(bookRepository.findById(bookId)
+                        .orElseThrow(() -> new RuntimeException("Nie znaleziono książki o ID: " + bookId)));
+                item.setQuantity(quantity);
                 item.setOrder(savedOrder);
+
                 orderItemService.save(item);
             }
 
-            return ResponseEntity.ok(savedOrder);
-        } catch (Exception e) {
-            System.err.println("Błąd podczas tworzenia zamówienia: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            Stripe.apiKey = stripeSecretKey;
+
+            long amountInCents = savedOrder.getAmount()
+                    .multiply(new BigDecimal(100))
+                    .longValue();
+
+            SessionCreateParams.LineItem lineItem =
+                    SessionCreateParams.LineItem.builder()
+                            .setQuantity(1L)
+                            .setPriceData(
+                                    SessionCreateParams.LineItem.PriceData.builder()
+                                            .setCurrency("pln")
+                                            .setUnitAmount(amountInCents)
+                                            .setProductData(
+                                                    SessionCreateParams.LineItem.PriceData.ProductData.builder()
+                                                            .setName("Zamówienie nr " + savedOrder.getOrderId())
+                                                            .build()
+                                            )
+                                            .build()
+                            )
+                            .build();
+
+            SessionCreateParams params = SessionCreateParams.builder()
+                    .setMode(SessionCreateParams.Mode.PAYMENT)
+                    .setSuccessUrl("http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}")
+                    .setCancelUrl("http://localhost:3000/cancel")
+                    .addLineItem(lineItem)
+                    .build();
+
+            Session session = Session.create(params);
+
+            savedOrder.setSessionId(session.getId());
+            orderService.save(savedOrder);
+
+            Map<String, String> responseData = Map.of(
+                    "orderId", String.valueOf(savedOrder.getOrderId()),
+                    "url", session.getUrl()
+            );
+
+            return ResponseEntity.ok(responseData);
+        } catch (StripeException e) {
+            throw new RuntimeException(e);
         }
     }
-
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Integer id) {
@@ -115,4 +163,5 @@ public class OrderController {
         orderService.deleteById(id);
         return ResponseEntity.noContent().build();
     }
+
 }

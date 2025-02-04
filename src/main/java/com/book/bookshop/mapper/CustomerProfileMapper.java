@@ -1,8 +1,9 @@
 package com.book.bookshop.mapper;
 
-import com.book.bookshop.controllers.CustomerController;
-import com.book.bookshop.dto.*;
-import com.book.bookshop.enums.OrderType;
+import com.book.bookshop.dto.customer.CustomerProfileDTO;
+import com.book.bookshop.dto.order.OrderDTO;
+import com.book.bookshop.dto.order.OrderItemDTO;
+import com.book.bookshop.dto.review.ReviewProfileDTO;
 import com.book.bookshop.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

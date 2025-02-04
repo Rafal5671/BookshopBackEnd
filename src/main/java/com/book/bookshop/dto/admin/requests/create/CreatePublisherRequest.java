@@ -1,4 +1,5 @@
-package com.book.bookshop.security;
+package com.book.bookshop.dto.admin.requests.create;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,6 +10,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthResponse {
-    private String token;
+public class CreatePublisherRequest {
+    private String name;
 }
+
