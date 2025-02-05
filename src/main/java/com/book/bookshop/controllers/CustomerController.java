@@ -57,12 +57,25 @@ public class CustomerController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Customer> registerCustomer(@RequestBody Customer customer) {
+    public ResponseEntity<AuthResponse> registerCustomer(@RequestBody Customer customer) {
+        // Hashujemy hasło i ustawiamy domyślną rolę
         String hashedPassword = passwordService.hashPassword(customer.getPassword());
         customer.setPassword(hashedPassword);
         customer.setRole(UserRole.ROLE_USER);
+
+        // Zapisujemy nowego klienta
         Customer newCustomer = customerService.save(customer);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newCustomer);
+
+        // Generujemy Access Token na podstawie email i roli
+        String accessToken = jwtUtil.generateToken(newCustomer.getEmail(), newCustomer.getRole().toString());
+
+        // Tworzymy Refresh Token i zapisujemy go w bazie
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(newCustomer.getEmail());
+
+        // Przygotowujemy obiekt odpowiedzi zawierający oba tokeny
+        AuthResponse response = new AuthResponse(accessToken, refreshToken.getToken());
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")

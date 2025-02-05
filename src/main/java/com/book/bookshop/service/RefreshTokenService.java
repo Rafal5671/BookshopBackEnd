@@ -3,8 +3,10 @@ package com.book.bookshop.service;
 import com.book.bookshop.models.RefreshToken;
 import com.book.bookshop.repo.RefreshTokenRepository;
 import com.book.bookshop.security.JwtUtil;
+
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.Optional;
@@ -80,8 +82,9 @@ public class RefreshTokenService {
     /**
      * Unieważnienie / usunięcie wszystkich tokenów użytkownika (np. przy wylogowaniu).
      */
-    public long revokeTokensByEmail(String email) {
-        return refreshTokenRepository.deleteByEmail(email);
+    @Transactional
+    public int  revokeTokensByEmail(String email) {
+        return refreshTokenRepository.revokeTokensByEmail(email);
     }
 
     /**
@@ -96,4 +99,5 @@ public class RefreshTokenService {
         long count = refreshTokenRepository.deleteByRevokedTrue();
         System.out.println("Usunięto " + count + " revoked tokenów.");
     }
+
 }
