@@ -109,8 +109,7 @@ public class CustomerProfileMapper {
         ReviewProfileDTO dto = new ReviewProfileDTO();
         dto.setReviewId(review.getReviewId());
         dto.setRating(review.getRating());
-        dto.setCommentPl(review.getCommentPl());
-        dto.setCommentEn(review.getCommentEn());
+        dto.setContent(review.getComment());
 
         if (review.getReviewDate() != null) {
             dto.setReviewDate(review.getReviewDate().format(DATE_FORMATTER));

@@ -24,8 +24,7 @@ public class Review {
     private Customer customer;
 
     private Integer rating;
-    private String commentPl;
-    private String commentEn;
+    private String comment;
 
     @Column(name = "review_date")
     private LocalDateTime reviewDate;

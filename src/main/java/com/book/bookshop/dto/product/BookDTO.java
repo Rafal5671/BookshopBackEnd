@@ -39,7 +39,7 @@ public class BookDTO {
     private PublisherDTO publisher;
     private List<AuthorDTO> authors;
     private List<ReviewProductDTO> reviews;
-
+    private Double averageRating;
     public BookDTO(Book book, String lang) {
         this.bookId = book.getBookId();
         this.originalTitle = book.getOriginalTitle();
@@ -57,6 +57,7 @@ public class BookDTO {
         if (book.getPublisher() != null) {
             this.publisher = new PublisherDTO(book.getPublisher().getName());
         }
+        this.averageRating = book.getAverageRating();
 
         if (book.getGenres() != null) {
             this.genres = book.getGenres()
@@ -78,7 +79,7 @@ public class BookDTO {
                             review.getReviewId(),
                             review.getCustomer().getFirstName(),
                             review.getRating(),
-                            review.getCommentPl()
+                            review.getComment()
                     ))
                     .collect(Collectors.toList());
         }

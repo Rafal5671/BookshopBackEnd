@@ -13,8 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ReviewDTO {
     private Integer reviewId;
-    private String commentPl;
-    private String commentEn;
+    private String content;
     private Integer rating;
     private LocalDateTime reviewDate;
     private Integer bookId;
@@ -22,8 +21,7 @@ public class ReviewDTO {
 
     public ReviewDTO(Review review) {
         this.reviewId = review.getReviewId();
-        this.commentPl = review.getCommentPl();
-        this.commentEn = review.getCommentEn();
+        this.content = review.getComment();
         this.rating = review.getRating();
         this.reviewDate = review.getReviewDate();
         this.bookId = review.getBook().getBookId();

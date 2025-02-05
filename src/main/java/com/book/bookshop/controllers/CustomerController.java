@@ -2,17 +2,17 @@ package com.book.bookshop.controllers;
 
 import com.book.bookshop.dto.customer.CustomerDTO;
 import com.book.bookshop.dto.customer.CustomerProfileDTO;
+import com.book.bookshop.enums.UserRole;
 import com.book.bookshop.mapper.CustomerMapper;
 import com.book.bookshop.mapper.CustomerProfileMapper;
 import com.book.bookshop.models.Customer;
 import com.book.bookshop.models.LoginRequest;
+import com.book.bookshop.models.RefreshToken;
 import com.book.bookshop.security.AuthResponse;
 import com.book.bookshop.security.JwtUtil;
 import com.book.bookshop.service.PasswordService;
 import com.book.bookshop.service.CustomerService;
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.book.bookshop.service.RefreshTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +33,9 @@ public class CustomerController {
     private PasswordService passwordService;
     @Autowired
     private CustomerProfileMapper userProfileMapper;
+    @Autowired
+    private RefreshTokenService refreshTokenService;
+
     @GetMapping
     public ResponseEntity<List<Customer>> getAllCustomers(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails != null) {
@@ -57,7 +60,7 @@ public class CustomerController {
     public ResponseEntity<Customer> registerCustomer(@RequestBody Customer customer) {
         String hashedPassword = passwordService.hashPassword(customer.getPassword());
         customer.setPassword(hashedPassword);
-        //TODO dodaj role w rejestracji
+        customer.setRole(UserRole.ROLE_USER);
         Customer newCustomer = customerService.save(customer);
         return ResponseEntity.status(HttpStatus.CREATED).body(newCustomer);
     }
@@ -70,8 +73,16 @@ public class CustomerController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
 
-        String token = jwtUtil.generateToken(customer.getEmail());
-        return ResponseEntity.ok(new AuthResponse(token));
+        // 1) Generujemy Access Token (krótki)
+        String accessToken = jwtUtil.generateToken(customer.getEmail(),customer.getRole().toString());
+
+        // 2) Tworzymy Refresh Token w bazie (jeśli używamy JWT, tam w środku się wygeneruje).
+        //    Alternatywnie można generować JWT i tu, a w bazie tylko zapisać klucz:
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(customer.getEmail());
+
+        // 3) Zwracamy oba tokeny klientowi
+        AuthResponse response = new AuthResponse(accessToken, refreshToken.getToken());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
@@ -82,7 +93,7 @@ public class CustomerController {
         if (customer == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
-
+        System.out.println(customer.getFirstName());
         CustomerDTO customerDto = CustomerMapper.toDto(customer);
         return ResponseEntity.ok(customerDto);
     }

@@ -1,6 +1,8 @@
 package com.book.bookshop.controllers;
 import com.book.bookshop.enums.OrderStatus;
 import com.book.bookshop.enums.OrderType;
+import com.book.bookshop.enums.PaymentMethod;
+import com.book.bookshop.enums.PaymentStatus;
 import com.book.bookshop.models.Address;
 import com.book.bookshop.models.Customer;
 import com.book.bookshop.models.Order;
@@ -68,18 +70,24 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<?> createOrder(
-            @RequestHeader("Authorization") String authHeader,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody Map<String, Object> orderData) {
         try {
-            String token = authHeader.substring(7);
-            String email = jwtUtil.extractUsername(token);
+            Customer customer = null;
+            OrderType orderType = OrderType.GUEST_USER; // domyślnie gość
 
-            Customer customer = customerService.findByEmail(email);
-            if (customer == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("Nie znaleziono użytkownika o podanym emailu.");
+            // Jeśli nagłówek Authorization jest podany, próbujemy pobrać użytkownika
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                String email = jwtUtil.extractUsername(token);
+                customer = customerService.findByEmail(email);
+                if (customer != null) {
+                    orderType = OrderType.REGISTERED_USER;
+                }
             }
 
+            // Zapis adresu
+            @SuppressWarnings("unchecked")
             Map<String, String> addressData = (Map<String, String>) orderData.get("address");
             Address address = new Address();
             address.setStreet(addressData.get("street"));
@@ -87,15 +95,27 @@ public class OrderController {
             address.setCity(addressData.get("city"));
             Address savedAddress = addressRepository.save(address);
 
+            // Utworzenie obiektu zamówienia
             Order order = new Order();
-            order.setCustomer(customer);
+            order.setCustomer(customer); // Może być null przy zamówieniu gościa
             order.setAmount(new BigDecimal(orderData.get("amount").toString()));
             order.setStatus(OrderStatus.PENDING);
             order.setAddress(savedAddress);
-            order.setOrderType(OrderType.REGISTERED_USER);
+            order.setOrderType(orderType);
+
+            if (orderData.containsKey("paymentMethod")) {
+                String paymentMethodStr = orderData.get("paymentMethod").toString().toUpperCase();
+                order.setPaymentMethod(PaymentMethod.valueOf(paymentMethodStr));
+            } else {
+                order.setPaymentMethod(PaymentMethod.CREDIT_CARD); // domyślna metoda
+            }
+            // Ustawienie statusu płatności na PENDING
+            order.setPaymentStatus(PaymentStatus.PENDING);
 
             Order savedOrder = orderService.save(order);
 
+            // Zapis pozycji zamówienia
+            @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) orderData.get("items");
             for (Map<String, Object> itemData : items) {
                 OrderItem item = new OrderItem();
@@ -110,8 +130,8 @@ public class OrderController {
                 orderItemService.save(item);
             }
 
+            // Konfiguracja Stripe
             Stripe.apiKey = stripeSecretKey;
-
             long amountInCents = savedOrder.getAmount()
                     .multiply(new BigDecimal(100))
                     .longValue();
@@ -154,6 +174,7 @@ public class OrderController {
             throw new RuntimeException(e);
         }
     }
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Integer id) {

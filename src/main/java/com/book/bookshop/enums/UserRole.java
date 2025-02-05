@@ -1,4 +1,4 @@
-package com.book.bookshop.models;
+package com.book.bookshop.enums;
 
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;

@@ -2,6 +2,8 @@ package com.book.bookshop.models;
 
 import com.book.bookshop.enums.OrderStatus;
 import com.book.bookshop.enums.OrderType;
+import com.book.bookshop.enums.PaymentMethod;
+import com.book.bookshop.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -46,6 +48,12 @@ public class Order {
 
     @Column(name = "payment_intent_id")
     private String paymentIntentId;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
     @Column(name = "session_id")
     private String sessionId;

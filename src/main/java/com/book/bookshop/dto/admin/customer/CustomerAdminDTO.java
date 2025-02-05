@@ -1,6 +1,6 @@
 package com.book.bookshop.dto.admin.customer;
 
-import com.book.bookshop.models.UserRole;
+import com.book.bookshop.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

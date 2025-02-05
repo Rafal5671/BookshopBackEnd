@@ -21,6 +21,7 @@ import java.util.Map;
 @RequestMapping("/api/reviews")
 @CrossOrigin(origins = "http://localhost:3000")
 public class ReviewController {
+
     @Autowired
     private ReviewService reviewService;
 
@@ -62,10 +63,9 @@ public class ReviewController {
         }
 
         String commentPl = (String) reviewData.get("commentPl");
-        String commentEn = (String) reviewData.get("commentEn");
         Integer rating = (Integer) reviewData.get("rating");
 
-        if (commentPl == null && commentEn == null) {
+        if (commentPl == null) {
             return ResponseEntity.badRequest().body("Comment is required.");
         }
         if (rating == null) {
@@ -76,8 +76,7 @@ public class ReviewController {
         review.setBook(book);
         review.setCustomer(customer);
         review.setRating(rating);
-        review.setCommentPl(commentPl);
-        review.setCommentEn(commentEn);
+        review.setComment(commentPl);
         review.setReviewDate(LocalDateTime.now());
         review.setCreatedAt(LocalDateTime.now());
 
@@ -103,7 +102,7 @@ public class ReviewController {
         if (review == null) {
             return ResponseEntity.notFound().build();
         }
-
+        System.out.println("Review found: " + review.getComment());
         return ResponseEntity.ok(new ReviewDTO(review));
     }
 
@@ -131,11 +130,9 @@ public class ReviewController {
         }
 
         String commentPl = (String) reviewData.get("commentPl");
-        String commentEn = (String) reviewData.get("commentEn");
         Integer rating = (Integer) reviewData.get("rating");
 
-        if (commentPl != null) existingReview.setCommentPl(commentPl);
-        if (commentEn != null) existingReview.setCommentEn(commentEn);
+        if (commentPl != null) existingReview.setComment(commentPl);
         if (rating != null) existingReview.setRating(rating);
 
         Review updatedReview = reviewService.save(existingReview);

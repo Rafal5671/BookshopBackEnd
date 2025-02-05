@@ -1,5 +1,6 @@
 package com.book.bookshop.models;
 
+import com.book.bookshop.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

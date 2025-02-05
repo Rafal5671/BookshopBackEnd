@@ -1,11 +1,13 @@
 package com.book.bookshop.controllers;
 
 import com.book.bookshop.dto.*;
+import com.book.bookshop.dto.admin.DashboardStatsDTO;
 import com.book.bookshop.dto.admin.authors.AuthorDTO;
 import com.book.bookshop.dto.admin.category.CategoryAdminDTO;
 import com.book.bookshop.dto.admin.customer.CustomerAdminDTO;
 import com.book.bookshop.dto.admin.product.BookAdminDTO;
 import com.book.bookshop.dto.admin.publisher.PublisherAdminDTO;
+import com.book.bookshop.dto.admin.refreshToken.RefreshTokenAdminDTO;
 import com.book.bookshop.dto.admin.requests.create.CreateAuthorRequest;
 import com.book.bookshop.dto.admin.requests.create.CreateBookRequest;
 import com.book.bookshop.dto.admin.requests.create.CreateCategoryRequest;
@@ -13,6 +15,7 @@ import com.book.bookshop.dto.admin.requests.create.CreatePublisherRequest;
 import com.book.bookshop.dto.admin.requests.update.UpdateBookRequest;
 import com.book.bookshop.dto.admin.requests.update.UpdateCategoryRequest;
 import com.book.bookshop.dto.admin.requests.update.UpdateOrderStatusRequest;
+import com.book.bookshop.dto.order.OrderItemAdminDTO;
 import com.book.bookshop.dto.response.PagedResponse;
 import com.book.bookshop.dto.review.ReviewProductDTO;
 import com.book.bookshop.enums.CoverType;
@@ -20,15 +23,19 @@ import com.book.bookshop.enums.LanguageBook;
 import com.book.bookshop.models.*;
 import com.book.bookshop.repo.*;
 import com.book.bookshop.service.AuthorService;
+import com.book.bookshop.specifications.AuthorSpecification;
+import com.book.bookshop.specifications.BookSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -54,9 +61,27 @@ public class AdminController {
     private CustomerRepository userRepository;
     @Autowired
     private CategoryRepository categoryRepository;
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+    @Autowired
+    private GenreRepository genreRepository;
     // Konwersja encji Order na DTO
     private GetOrderDTO convertToOrderDTO(Order order) {
         String formattedAddress = formatAddress(order.getAddress());
+
+        // Mapujemy listę pozycji zamówienia do OrderItemDTO
+        List<OrderItemAdminDTO> orderItems = order.getItems().stream().map(item -> {
+            // Załóżmy, że cena jednostkowa to book.getPrice()
+            BigDecimal unitPrice = item.getBook().getPrice();
+            BigDecimal lineTotal = unitPrice.multiply(new BigDecimal(item.getQuantity()));
+            return new OrderItemAdminDTO(
+                    item.getBook().getBookId(),
+                    item.getBook().getTitlePl(),  // lub titleEn, zależnie od potrzeb
+                    item.getQuantity(),
+                    lineTotal
+            );
+        }).collect(Collectors.toList());
+
         return new GetOrderDTO(
                 order.getOrderId(),
                 order.getOrderType(),
@@ -64,8 +89,9 @@ public class AdminController {
                 formattedAddress,
                 order.getOrderDate(),
                 order.getStatus(),
-                order.getAmount(),
-                order.getItems().size() // Ilość pozycji w zamówieniu
+                order.getAmount(), // Łączna kwota zamówienia (może być już obliczona w encji)
+                orderItems.size(), // Liczba pozycji
+                orderItems        // Lista pozycji zamówienia
         );
     }
 
@@ -93,13 +119,13 @@ public class AdminController {
         List<AuthorDTO> authorsDTO = book.getAuthors().stream()
                 .map(author -> new AuthorDTO(author.getAuthorId(), author.getFirstName(), author.getLastName()))
                 .collect(Collectors.toList());
-
+        String categoryName = book.getCategory() != null ? book.getCategory().getNamePl() : "Brak kategorii";
         List<ReviewProductDTO> reviewsDTO = book.getReviews().stream()
                 .map(review -> new ReviewProductDTO(
                         review.getReviewId(),
                         review.getCustomer().getFirstName(),
                         review.getRating(),
-                        review.getCommentPl()
+                        review.getComment()
                 ))
                 .collect(Collectors.toList());
 
@@ -123,13 +149,27 @@ public class AdminController {
                         : null,
                 publisherDTO,
                 authorsDTO,
-                reviewsDTO
+                reviewsDTO,
+                categoryName
         );
     }
 
     @GetMapping("/products")
-    public PagedResponse<BookAdminDTO> getBooks(@RequestParam int page, @RequestParam int size) {
-        Page<Book> pageResult = bookRepository.findAll(PageRequest.of(page, size, Sort.by("bookId").ascending()));
+    public PagedResponse<BookAdminDTO> getBooks(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) Integer genreId) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("bookId").ascending());
+
+        // Budujemy Specification – zaczynamy od "pustej" specyfikacji (conjunction)
+        Specification<Book> spec = Specification.where(BookSpecification.titleContains(title))
+                .and(BookSpecification.hasCategory(categoryId))
+                .and(BookSpecification.hasGenre(genreId));
+
+        Page<Book> pageResult = bookRepository.findAll(spec, pageable);
 
         List<BookAdminDTO> dtoList = pageResult.getContent().stream()
                 .map(this::convertToDTO)
@@ -143,20 +183,26 @@ public class AdminController {
                 pageResult.getTotalPages()
         );
     }
+
+
     @GetMapping("/authors")
-    public PagedResponse<AuthorDTO> getAuthorsPage(@RequestParam(defaultValue = "0") int page,
-                                                   @RequestParam(defaultValue = "5") int size) {
+    public PagedResponse<AuthorDTO> getAuthors(
+            @RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("authorId").ascending());
-        Page<Author> pageResult = authorService.findAll(pageable);
 
-        // Mapowanie encji Author na AuthorDTO
-        List<AuthorDTO> authors = pageResult.getContent().stream()
-                .map(author -> new AuthorDTO(author.getAuthorId(), author.getFirstName(), author.getLastName()))
-                .toList();
+        Specification<Author> spec = AuthorSpecification.nameContains(query);
 
-        // Zwróć dane w opakowaniu PagedResponse
+        Page<Author> pageResult = authorRepository.findAll(spec, pageable);
+
+        List<AuthorDTO> dtoList = pageResult.getContent().stream()
+                .map(this::convertToAuthorDTO)
+                .collect(Collectors.toList());
+
         return new PagedResponse<>(
-                authors,
+                dtoList,
                 pageResult.getNumber(),
                 pageResult.getSize(),
                 pageResult.getTotalElements(),
@@ -421,14 +467,34 @@ public class AdminController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @GetMapping("/statistics")
+    public ResponseEntity<DashboardStatsDTO> getStatistics() {
+        long ordersCount = orderRepository.count();
+        long usersCount = userRepository.count();
+        long productsCount = bookRepository.count();
+
+        DashboardStatsDTO stats = new DashboardStatsDTO(ordersCount, usersCount, productsCount);
+        return ResponseEntity.ok(stats);
+    }
 
     @GetMapping("/publishers")
-    public PagedResponse<PublishersDTO> getPublishers(@RequestParam int page, @RequestParam int size) {
-        // Tworzymy pageable z sortowaniem po polu "publisherId" rosnąco
-        Pageable pageable = PageRequest.of(page, size, Sort.by("publisherId").ascending());
-        Page<Publisher> pageResult = publisherRepository.findAll(pageable);
+    public PagedResponse<PublishersDTO> getPublishers(
+            @RequestParam(required = false) String query, // opcjonalny parametr wyszukiwania
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
-        // Konwertujemy Publisher -> PublisherDTO
+        Pageable pageable = PageRequest.of(page, size, Sort.by("publisherId").ascending());
+        Page<Publisher> pageResult;
+
+        if (query == null || query.isBlank()) {
+            // Jeśli parametr query jest pusty, pobieramy wszystkich wydawców
+            pageResult = publisherRepository.findAll(pageable);
+        } else {
+            // Jeśli parametr query jest podany, wyszukujemy wydawców po nazwie (ignorując wielkość liter)
+            pageResult = publisherRepository.findByNameContainingIgnoreCase(query, pageable);
+        }
+
+        // Konwersja encji Publisher -> PublisherDTO
         List<PublishersDTO> dtoList = pageResult.getContent().stream()
                 .map(this::convertToPublisherDTO)
                 .collect(Collectors.toList());
@@ -505,21 +571,39 @@ public class AdminController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "orderDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String searchTerm,
+            @RequestParam(required = false) String filterStatus
     ) {
-        // Tworzymy Pageable z sortowaniem
-        Sort sort = sortDir.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+
+        Sort sort = sortDir.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        // Pobieranie zamówień z bazy
-        Page<Order> orderPage = orderRepository.findAll(pageable);
+        String backendStatus = null;
+        if (filterStatus != null && !filterStatus.isBlank() && !filterStatus.equalsIgnoreCase("Wszystkie")) {
+            Map<String, String> statusMap = new HashMap<>();
+            statusMap.put("Oczekujące", "PENDING");
+            statusMap.put("Opłacone", "PAID");
+            statusMap.put("Wysłane", "SHIPPED");
+            statusMap.put("Dostarczone", "DELIVERED");
+            statusMap.put("Anulowane", "CANCELED");
+            statusMap.put("Zwrócone", "RETURNED");
+            backendStatus = statusMap.get(filterStatus);
+        }
 
-        // Mapowanie Order -> OrderDTO
+        Page<Order> orderPage;
+        if ((searchTerm == null || searchTerm.isBlank()) && backendStatus == null) {
+            orderPage = orderRepository.findAll(pageable);
+        } else {
+            orderPage = orderRepository.findBySearchAndStatus(searchTerm, backendStatus, pageable);
+        }
+
         List<GetOrderDTO> orderDTOs = orderPage.getContent().stream()
                 .map(this::convertToOrderDTO)
                 .collect(Collectors.toList());
 
-        // Przygotowanie odpowiedzi w opakowaniu PagedResponse
         PagedResponse<GetOrderDTO> response = new PagedResponse<>(
                 orderDTOs,
                 orderPage.getNumber(),
@@ -530,6 +614,7 @@ public class AdminController {
 
         return ResponseEntity.ok(response);
     }
+
     @PutMapping("/orders/{id}/status")
     public ResponseEntity<?> updateOrderStatus(
             @PathVariable Integer id,
@@ -631,6 +716,56 @@ public class AdminController {
             errorResponse.put("message", "Wystąpił błąd podczas dodawania kategorii.");
             return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+    @GetMapping("/refresh-tokens")
+    public PagedResponse<RefreshTokenAdminDTO> getRefreshTokensByEmailPaged(
+            @RequestParam(defaultValue = "") String email,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<RefreshToken> result;
+
+        if (email.isBlank()) {
+            // Jeśli email jest pusty, pobieramy wszystkie tokeny
+            result = refreshTokenRepository.findAll(pageable);
+        } else {
+            // Jeśli email nie jest pusty, filtrujemy po emailu
+            result = refreshTokenRepository.findByEmail(email, pageable);
+        }
+
+        // Ręczne mapowanie obiektów RefreshToken na RefreshTokenAdminDTO
+        List<RefreshTokenAdminDTO> dtoList = result.getContent().stream()
+                .map(token -> new RefreshTokenAdminDTO(
+                        token.getId(),
+                        token.getEmail(),
+                        token.getToken(),
+                        token.getExpiryDate(),
+                        token.isRevoked()
+                ))
+                .collect(Collectors.toList());
+
+        return new PagedResponse<>(dtoList, result.getNumber(), result.getSize(), result.getTotalElements(),result.getTotalPages());
+    }
+    @PutMapping("/refresh-tokens/revoke/{id}")
+    public ResponseEntity<?> revokeToken(@PathVariable Long id) {
+        Optional<RefreshToken> optToken = refreshTokenRepository.findById(id);
+
+        if (optToken.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Nie znaleziono tokenu o ID: " + id));
+        }
+
+        RefreshToken token = optToken.get();
+        if (token.isRevoked()) {
+            // Już jest unieważniony
+            return ResponseEntity.ok(Map.of("message", "Token już jest unieważniony."));
+        }
+
+        token.setRevoked(true);
+        refreshTokenRepository.save(token);
+
+        return ResponseEntity.ok(Map.of("message", "Token o ID " + id + " został unieważniony."));
     }
 
     // 2. Edycja Kategorii
@@ -740,6 +875,25 @@ public class AdminController {
                 categoryPage.getTotalElements(),
                 categoryPage.getTotalPages()
         );
+    }
+    // Pobieranie wszystkich kategorii
+    @GetMapping("/categories/all")
+    public ResponseEntity<List<CategoryAdminDTO>> getAllCategories() {
+        List<CategoryAdminDTO> categories = categoryRepository.findAll()
+                .stream()
+                .map(this::convertToCategoryDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(categories);
+    }
+
+    // Pobieranie wszystkich gatunków
+    @GetMapping("/genres/all")
+    public ResponseEntity<List<String>> getAllGenres() {
+        List<String> genres = genreRepository.findAll()
+                .stream()
+                .map(Genre::getName)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(genres);
     }
 
     // 5. Pobieranie Szczegółów Kategorii (opcjonalnie)

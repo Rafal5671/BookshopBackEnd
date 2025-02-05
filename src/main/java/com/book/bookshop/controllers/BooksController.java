@@ -8,6 +8,8 @@ import com.book.bookshop.models.Book;
 import com.book.bookshop.repo.BookRepository;
 import com.book.bookshop.service.BookService;
 import com.book.bookshop.specifications.BookSpecification;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -159,7 +161,8 @@ public class BooksController {
                     .body("Błąd serwera: " + e.getMessage());
         }
     }
-
+    @Getter
+    @Setter
     public static class PaginatedResponse {
         private List<BookDTO> books;
         private int currentPage;
@@ -187,70 +190,22 @@ public class BooksController {
             this.availableAuthors = availableAuthors;
             this.maxAvailablePrice = maxAvailablePrice;
         }
+    }
+    @GetMapping("/random")
+    public ResponseEntity<?> getRandomBooks() {
+        try {
+            // Pobieramy 12 losowych książek
+            List<Book> randomBooks = bookRepository.findRandomBooks();
 
-        public List<BookDTO> getBooks() {
-            return books;
+            // Mapowanie na DTO, zakładamy, że BookDTO przyjmuje encję Book oraz język (np. "pl")
+            List<BookDTO> randomBooksDto = randomBooks.stream()
+                    .map(book -> new BookDTO(book, "pl"))
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(randomBooksDto);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Błąd serwera: " + e.getMessage());
         }
-
-        public void setBooks(List<BookDTO> books) {
-            this.books = books;
-        }
-
-        public int getCurrentPage() {
-            return currentPage;
-        }
-
-        public void setCurrentPage(int currentPage) {
-            this.currentPage = currentPage;
-        }
-
-        public int getTotalPages() {
-            return totalPages;
-        }
-
-        public void setTotalPages(int totalPages) {
-            this.totalPages = totalPages;
-        }
-
-        public long getTotalItems() {
-            return totalItems;
-        }
-
-        public void setTotalItems(long totalItems) {
-            this.totalItems = totalItems;
-        }
-
-        public List<GenreDTO> getAvailableGenres() {
-            return availableGenres;
-        }
-
-        public void setAvailableGenres(List<GenreDTO> availableGenres) {
-            this.availableGenres = availableGenres;
-        }
-
-        public List<CategoryDTO> getAvailableCategories() {
-            return availableCategories;
-        }
-
-        public void setAvailableCategories(List<CategoryDTO> availableCategories) {
-            this.availableCategories = availableCategories;
-        }
-
-        public List<AuthorDTO> getAvailableAuthors() {
-            return availableAuthors;
-        }
-
-        public void setAvailableAuthors(List<AuthorDTO> availableAuthors) {
-            this.availableAuthors = availableAuthors;
-        }
-
-        public BigDecimal getMaxAvailablePrice() {
-            return maxAvailablePrice;
-        }
-
-        public void setMaxAvailablePrice(BigDecimal maxAvailablePrice) {
-            this.maxAvailablePrice = maxAvailablePrice;
-        }
-
     }
 }

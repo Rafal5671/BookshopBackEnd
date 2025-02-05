@@ -6,9 +6,8 @@ import lombok.Data;
 public class ReviewProfileDTO {
     private Integer reviewId;
     private Integer rating;
-    private String commentPl;
-    private String commentEn;
+    private String content;
     private String reviewDate;
     private String createdAt;
-    private String bookTitle;   // jeżeli chcesz wyświetlić tytuł książki
+    private String bookTitle;
 }

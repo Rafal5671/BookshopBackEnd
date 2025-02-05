@@ -1,4 +1,4 @@
-package com.book.bookshop.models;
+package com.book.bookshop.enums;
 
 public enum PaymentStatus {
     PENDING,

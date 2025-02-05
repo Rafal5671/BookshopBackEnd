@@ -9,21 +9,31 @@ import org.springframework.stereotype.Component;
 @Component
 public class JwtUtil {
     private String secretKey = "75bf7fca6937610f1b5b7fddee261dcf707f3c3e4881a60ddb8fa5cc3796a8c4";
-    private final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10 godzin
+    private final long ACCESS_EXPIRATION_TIME = 1000 * 60 * 2; // 2 minuty
+
+    private final long REFRESH_EXPIRATION_TIME = 604800000L;
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
-    public String generateToken(String email) {
+    public String generateToken(String email, String role) {
         return Jwts.builder()
                 .setSubject(email)
+                .claim("role", role) // dodajemy zapis roli
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_EXPIRATION_TIME))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
-
+    public String generateRefreshToken(String email) {
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_EXPIRATION_TIME))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
     public String extractUsername(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
@@ -33,7 +43,16 @@ public class JwtUtil {
                 .getSubject();
     }
 
-    private boolean isTokenExpired(String token) {
+    public String extractRole(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .get("role", String.class);
+    }
+
+    public boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
@@ -48,5 +67,8 @@ public class JwtUtil {
 
     public boolean validateToken(String token, String username) {
         return username.equals(extractUsername(token)) && !isTokenExpired(token);
+    }
+    public long getRefreshExpirationTime() {
+        return REFRESH_EXPIRATION_TIME;
     }
 }

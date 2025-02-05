@@ -37,5 +37,6 @@ public class BookAdminDTO {
     private PublisherAdminDTO publisher;
     private List<AuthorDTO> authors;
     private List<ReviewProductDTO> reviews;
+    private String category;
 }
 
