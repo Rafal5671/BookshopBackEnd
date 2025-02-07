@@ -81,11 +81,17 @@ public class AdminController {
                     lineTotal
             );
         }).collect(Collectors.toList());
+        String customerName;
+        if (order.getCustomer() != null) {
+            customerName = order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName();
+        } else {
+            customerName = "Guest User"; // lub inny komunikat domyślny
+        }
 
         return new GetOrderDTO(
                 order.getOrderId(),
                 order.getOrderType(),
-                order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName(),
+                customerName,
                 formattedAddress,
                 order.getOrderDate(),
                 order.getStatus(),

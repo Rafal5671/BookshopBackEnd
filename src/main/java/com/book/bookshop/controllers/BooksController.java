@@ -105,34 +105,86 @@ public class BooksController {
 
             Sort.Direction sortDirection = order.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
             Sort sort = Sort.by(sortDirection, sortBy);
-
             Pageable pageable = PageRequest.of(page - 1, limit, sort);
 
             Page<Book> bookPage = bookRepository.findAll(spec, pageable);
-
             List<BookDTO> bookDTOs = bookPage.getContent().stream()
                     .map(book -> new BookDTO(book, lang))
                     .collect(Collectors.toList());
 
-            Set<GenreDTO> genres = bookPage.getContent().stream()
+            // Zwracamy tylko dane książek oraz dane paginacyjne
+            return ResponseEntity.ok(new PaginatedResponse(
+                    bookDTOs,
+                    bookPage.getNumber() + 1,
+                    bookPage.getTotalPages(),
+                    bookPage.getTotalElements()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Błąd serwera: " + e.getMessage());
+        }
+    }
+
+    @Getter
+    @Setter
+    public class PaginatedResponse {
+        private List<BookDTO> books;
+        private int currentPage;
+        private int totalPages;
+        private long totalItems;
+
+        public PaginatedResponse(List<BookDTO> books, int currentPage, int totalPages, long totalItems) {
+            this.books = books;
+            this.currentPage = currentPage;
+            this.totalPages = totalPages;
+            this.totalItems = totalItems;
+        }
+        // Gettery i settery...
+    }
+    @GetMapping("/aggregated")
+    public ResponseEntity<?> getAggregatedFilterData(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) List<Integer> genreId,
+            @RequestParam(required = false) List<Integer> categoryId,
+            @RequestParam(required = false) List<Integer> authorId,
+            @RequestParam(required = false) BigDecimal priceMin,
+            @RequestParam(required = false) BigDecimal priceMax,
+            @RequestParam(required = false) Boolean onSale,
+            @RequestParam(defaultValue = "pl") String lang
+    ) {
+        try {
+            Specification<Book> spec = Specification.where(BookSpecification.titleContains(search))
+                    .or(BookSpecification.authorContains(search))
+                    .and(BookSpecification.hasGenres(genreId))
+                    .and(BookSpecification.hasCategories(categoryId))
+                    .and(BookSpecification.hasAuthors(authorId))
+                    .and(BookSpecification.priceGreaterThanOrEqualTo(priceMin))
+                    .and(BookSpecification.priceLessThanOrEqualTo(priceMax))
+                    .and(BookSpecification.isOnSale(onSale));
+
+            // Pobieramy wszystkie książki pasujące do zapytania (bez paginacji)
+            List<Book> allBooks = bookRepository.findAll(spec);
+
+            // Zbieramy unikalne gatunki na podstawie książek
+            Set<GenreDTO> genres = allBooks.stream()
                     .flatMap(b -> b.getGenres().stream())
                     .distinct()
                     .map(genre -> new GenreDTO(
                             genre.getGenreId(),
-                            (lang.equals("en") && genre.getNameEn() != null)
-                                    ? genre.getNameEn()
-                                    : genre.getName()
+                            (lang.equals("en") && genre.getNameEn() != null) ? genre.getNameEn() : genre.getName()
                     ))
                     .collect(Collectors.toSet());
 
-            Set<CategoryDTO> categories = bookPage.getContent().stream()
+            // Zbieramy unikalne kategorie – zakładamy, że dla książki mamy pojedynczą kategorię
+            Set<CategoryDTO> categories = allBooks.stream()
                     .map(Book::getCategory)
                     .filter(Objects::nonNull)
                     .distinct()
-                    .map(category -> new CategoryDTO(category, lang)) // <-- używamy nowego konstruktora
+                    .map(category -> new CategoryDTO(category, lang))
                     .collect(Collectors.toSet());
 
-            Set<AuthorDTO> authors = bookPage.getContent().stream()
+            // Zbieramy unikalnych autorów
+            Set<AuthorDTO> authors = allBooks.stream()
                     .flatMap(b -> b.getAuthors().stream())
                     .map(author -> new AuthorDTO(
                             author.getAuthorId(),
@@ -141,21 +193,21 @@ public class BooksController {
                     ))
                     .collect(Collectors.toSet());
 
-            BigDecimal maxAvailablePrice = bookPage.getContent().stream()
+            // Wyznaczamy maksymalną cenę spośród książek
+            BigDecimal maxAvailablePrice = allBooks.stream()
                     .map(Book::getPrice)
                     .max(BigDecimal::compareTo)
                     .orElse(BigDecimal.ZERO);
 
-            return ResponseEntity.ok(new PaginatedResponse(
-                    bookDTOs,
-                    bookPage.getNumber() + 1,
-                    bookPage.getTotalPages(),
-                    bookPage.getTotalElements(),
+            // Tworzymy obiekt, który zawiera wszystkie dane filtrujące
+            AggregatedFilterData response = new AggregatedFilterData(
                     new ArrayList<>(genres),
                     new ArrayList<>(categories),
                     new ArrayList<>(authors),
                     maxAvailablePrice
-            ));
+            );
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Błąd serwera: " + e.getMessage());
@@ -163,33 +215,19 @@ public class BooksController {
     }
     @Getter
     @Setter
-    public static class PaginatedResponse {
-        private List<BookDTO> books;
-        private int currentPage;
-        private int totalPages;
-        private long totalItems;
-        private List<GenreDTO> availableGenres;
-        private List<CategoryDTO> availableCategories;
-        private List<AuthorDTO> availableAuthors;
+    public class AggregatedFilterData {
+        private List<GenreDTO> genres;
+        private List<CategoryDTO> categories;
+        private List<AuthorDTO> authors;
         private BigDecimal maxAvailablePrice;
 
-        public PaginatedResponse(List<BookDTO> books,
-                                 int currentPage,
-                                 int totalPages,
-                                 long totalItems,
-                                 List<GenreDTO> availableGenres,
-                                 List<CategoryDTO> availableCategories,
-                                 List<AuthorDTO> availableAuthors,
-                                 BigDecimal maxAvailablePrice) {
-            this.books = books;
-            this.currentPage = currentPage;
-            this.totalPages = totalPages;
-            this.totalItems = totalItems;
-            this.availableGenres = availableGenres;
-            this.availableCategories = availableCategories;
-            this.availableAuthors = availableAuthors;
+        public AggregatedFilterData(List<GenreDTO> genres, List<CategoryDTO> categories, List<AuthorDTO> authors, BigDecimal maxAvailablePrice) {
+            this.genres = genres;
+            this.categories = categories;
+            this.authors = authors;
             this.maxAvailablePrice = maxAvailablePrice;
         }
+        // Gettery i settery...
     }
     @GetMapping("/random")
     public ResponseEntity<?> getRandomBooks() {

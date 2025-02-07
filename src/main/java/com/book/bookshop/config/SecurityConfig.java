@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .authorizeRequests()
                 .requestMatchers("/api/customers/login", "/api/customers/register", "/api/books","/api/books/search", "/api/books/search/*","/api/books/*","/api/books/genre","/api/books/genre/**", "/api/orders").permitAll()
                 .requestMatchers("/api/reviews/all/*").permitAll()
+                .requestMatchers("/api/books/aggregated").permitAll()
                 .requestMatchers("/api/reviews/all/").permitAll()
                 .requestMatchers("/api/authors/**").permitAll()
                 .requestMatchers("/api/authors/*").permitAll()
