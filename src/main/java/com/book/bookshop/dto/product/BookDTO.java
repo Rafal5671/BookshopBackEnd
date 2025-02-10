@@ -1,7 +1,9 @@
 package com.book.bookshop.dto.product;
 
+import com.book.bookshop.dto.GenreDTO;
 import com.book.bookshop.dto.PublisherDTO;
 import com.book.bookshop.dto.admin.authors.AuthorDTO;
+import com.book.bookshop.dto.admin.category.CategoryDTO;
 import com.book.bookshop.dto.review.ReviewProductDTO;
 import com.book.bookshop.enums.CoverType;
 import com.book.bookshop.enums.LanguageBook;
@@ -22,7 +24,6 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookDTO {
-
     private Integer bookId;
     private String title;
     private String originalTitle;
@@ -34,11 +35,12 @@ public class BookDTO {
     private Integer pagesCount;
     private CoverType coverType;
     private LanguageBook language;
-    private List<String> genres;
+    private List<BookGenreDTO> genres;
     private LocalDateTime releaseDate;
     private PublisherDTO publisher;
     private List<AuthorDTO> authors;
     private List<ReviewProductDTO> reviews;
+    private CategoryDTO category;
     private Double averageRating;
     public BookDTO(Book book, String lang) {
         this.bookId = book.getBookId();
@@ -60,10 +62,12 @@ public class BookDTO {
         this.averageRating = book.getAverageRating();
 
         if (book.getGenres() != null) {
-            this.genres = book.getGenres()
-                    .stream()
-                    .map(Genre::getName)
+            this.genres = book.getGenres().stream()
+                    .map(genre -> new BookGenreDTO(genre, lang))
                     .collect(Collectors.toList());
+        }
+        if(book.getCategory() != null) {
+            this.category = new CategoryDTO(book.getCategory(),lang);
         }
 
         if (book.getAuthors() != null) {

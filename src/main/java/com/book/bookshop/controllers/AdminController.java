@@ -95,13 +95,12 @@ public class AdminController {
                 formattedAddress,
                 order.getOrderDate(),
                 order.getStatus(),
-                order.getAmount(), // Łączna kwota zamówienia (może być już obliczona w encji)
-                orderItems.size(), // Liczba pozycji
-                orderItems        // Lista pozycji zamówienia
+                order.getAmount(),
+                orderItems.size(),
+                orderItems
         );
     }
 
-    // Formatowanie adresu w postaci jednego ciągu znaków
     private String formatAddress(Address address) {
         return String.format(
                 "%s, %s, %s, %s",
