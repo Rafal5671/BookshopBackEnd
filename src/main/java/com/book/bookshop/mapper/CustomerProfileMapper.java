@@ -110,7 +110,7 @@ public class CustomerProfileMapper {
         dto.setReviewId(review.getReviewId());
         dto.setRating(review.getRating());
         dto.setContent(review.getComment());
-
+        dto.setBookId(review.getBook().getBookId());
         if (review.getReviewDate() != null) {
             dto.setReviewDate(review.getReviewDate().format(DATE_FORMATTER));
         }

@@ -10,4 +10,5 @@ public class ReviewProfileDTO {
     private String reviewDate;
     private String createdAt;
     private String bookTitle;
+    private Integer bookId;
 }

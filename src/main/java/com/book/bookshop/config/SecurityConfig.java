@@ -52,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/products/**").hasAnyRole("ADMIN", "EMPLOYEE")
                 .requestMatchers("/api/admin/categories/**").hasAnyRole("ADMIN", "EMPLOYEE")
                 .requestMatchers("/api/admin/statistics").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers("/api/admin/refresh-tokens").hasAnyRole("ADMIN")
                 .requestMatchers("/api/customers/me").authenticated() // Endpointy chronione wymagające autoryzacji
                 .anyRequest().authenticated()
                 .and()

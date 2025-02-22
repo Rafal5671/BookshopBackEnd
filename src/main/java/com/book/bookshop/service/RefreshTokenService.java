@@ -22,22 +22,12 @@ public class RefreshTokenService {
         this.jwtUtil = jwtUtil;
     }
 
-    /**
-     * Tworzy nowy Refresh Token (JWT) i zapisuje go w bazie.
-     */
     public RefreshToken createRefreshToken(String email) {
-        // 1) Generujemy JWT o dłuższym czasie życia
         String refreshJwt = jwtUtil.generateRefreshToken(email);
-        // Wewnątrz JwtUtil masz np. REFRESH_EXPIRATION_TIME = 7 dni
-
-        // 2) Zapisujemy do encji i bazy
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setEmail(email);
         refreshToken.setToken(refreshJwt);
 
-        // Zapiszmy też expiryDate w bazie, żeby mieć kontrolę
-        // (opcjonalnie wyciągamy datę ważności z samego JWT lub
-        //  używamy tego samego refreshTokenDurationMs co w JwtUtil):
         Date dbExpiry = new Date(System.currentTimeMillis() + jwtUtil.getRefreshExpirationTime());
         refreshToken.setExpiryDate(dbExpiry);
 
@@ -46,17 +36,10 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(refreshToken);
     }
 
-    /**
-     * Wyszukaj Refresh Token w bazie po jego wartości (czyli całym stringu JWT).
-     */
     public Optional<RefreshToken> findByToken(String token) {
         return refreshTokenRepository.findByToken(token);
     }
 
-    /**
-     * Weryfikuje, czy token nie jest przeterminowany (wg JwtUtil) i nie jest revoked.
-     * Jeśli wygasł, usuwa go z bazy i zwraca false.
-     */
     public boolean verifyExpiration(RefreshToken token) {
         String refreshJwt = token.getToken();
 
@@ -79,22 +62,18 @@ public class RefreshTokenService {
         }
     }
 
-    /**
-     * Unieważnienie / usunięcie wszystkich tokenów użytkownika (np. przy wylogowaniu).
-     */
     @Transactional
     public int  revokeTokensByEmail(String email) {
         return refreshTokenRepository.revokeTokensByEmail(email);
     }
 
-    /**
-     * Unieważnienie pojedynczego tokena (np. przy refresh rotation).
-     */
     public RefreshToken revoke(RefreshToken token) {
         token.setRevoked(true);
         return refreshTokenRepository.save(token);
     }
+
     @Scheduled(cron = "0 0 * * * ?")
+    @Transactional
     public void removeAllRevokedTokens() {
         long count = refreshTokenRepository.deleteByRevokedTrue();
         System.out.println("Usunięto " + count + " revoked tokenów.");

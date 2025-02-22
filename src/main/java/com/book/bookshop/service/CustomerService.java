@@ -1,5 +1,6 @@
 package com.book.bookshop.service;
 
+import com.book.bookshop.enums.UserRole;
 import com.book.bookshop.models.Customer;
 import com.book.bookshop.repo.CustomerRepository;
 import jakarta.transaction.Transactional;
@@ -13,7 +14,17 @@ import java.util.Optional;
 public class CustomerService {
     @Autowired
     private CustomerRepository customerRepository;
-
+    @Autowired
+    private PasswordService passwordService;
+    public Customer registerCustomer(Customer customer) {
+        // Hashujemy hasło
+        String hashedPassword = passwordService.hashPassword(customer.getPassword());
+        customer.setPassword(hashedPassword);
+        // Ustawiamy domyślną rolę
+        customer.setRole(UserRole.ROLE_USER);
+        // Zapisujemy nowego klienta
+        return customerRepository.save(customer);
+    }
     public List<Customer> findAll() {
         return customerRepository.findAll();
     }

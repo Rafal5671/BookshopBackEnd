@@ -58,42 +58,26 @@ public class CustomerController {
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> registerCustomer(@RequestBody Customer customer) {
-        // Hashujemy hasło i ustawiamy domyślną rolę
-        String hashedPassword = passwordService.hashPassword(customer.getPassword());
-        customer.setPassword(hashedPassword);
-        customer.setRole(UserRole.ROLE_USER);
-
-        // Zapisujemy nowego klienta
-        Customer newCustomer = customerService.save(customer);
-
-        // Generujemy Access Token na podstawie email i roli
+        Customer newCustomer = customerService.registerCustomer(customer);
         String accessToken = jwtUtil.generateToken(newCustomer.getEmail(), newCustomer.getRole().toString());
-
-        // Tworzymy Refresh Token i zapisujemy go w bazie
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(newCustomer.getEmail());
-
-        // Przygotowujemy obiekt odpowiedzi zawierający oba tokeny
         AuthResponse response = new AuthResponse(accessToken, refreshToken.getToken());
-
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         Customer customer = customerService.findByEmail(loginRequest.getEmail());
-
         if (customer == null || !passwordService.checkPassword(loginRequest.getPassword(), customer.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
         }
-
-        // 1) Generujemy Access Token (krótki)
         String accessToken = jwtUtil.generateToken(customer.getEmail(),customer.getRole().toString());
 
-        // 2) Tworzymy Refresh Token w bazie (jeśli używamy JWT, tam w środku się wygeneruje).
-        //    Alternatywnie można generować JWT i tu, a w bazie tylko zapisać klucz:
+        // 1) Tworzymy Refresh Token w bazie
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(customer.getEmail());
 
-        // 3) Zwracamy oba tokeny klientowi
+        // 2) Zwracamy oba tokeny klientowi
         AuthResponse response = new AuthResponse(accessToken, refreshToken.getToken());
         return ResponseEntity.ok(response);
     }

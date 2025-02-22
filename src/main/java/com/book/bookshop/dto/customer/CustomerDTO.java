@@ -3,12 +3,9 @@ package com.book.bookshop.dto.customer;
 import lombok.*;
 
 import java.time.LocalDateTime;
-
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
+@Data
 public class CustomerDTO {
     private String email;
     private String firstName;

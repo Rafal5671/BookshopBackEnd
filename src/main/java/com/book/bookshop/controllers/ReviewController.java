@@ -1,11 +1,7 @@
 package com.book.bookshop.controllers;
 
 import com.book.bookshop.dto.review.ReviewDTO;
-import com.book.bookshop.models.Book;
-import com.book.bookshop.models.Customer;
 import com.book.bookshop.models.Review;
-import com.book.bookshop.service.BookService;
-import com.book.bookshop.service.CustomerService;
 import com.book.bookshop.service.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +9,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -25,85 +20,42 @@ public class ReviewController {
     @Autowired
     private ReviewService reviewService;
 
-    @Autowired
-    private BookService bookService;
-
-    @Autowired
-    private CustomerService customerService;
-
     @GetMapping
     public ResponseEntity<List<ReviewDTO>> getAllReviews() {
-        List<Review> reviews = reviewService.findAll();
-        List<ReviewDTO> result = reviews.stream()
-                .map(ReviewDTO::new)
-                .toList();
+        List<ReviewDTO> result = reviewService.findAllDTO();
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ReviewDTO> getReviewById(@PathVariable Integer id) {
-        return reviewService.findById(id)
-                .map(review -> ResponseEntity.ok(new ReviewDTO(review)))
+        return reviewService.findDTOById(id)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-
 
     @PostMapping("/{bookId}")
     public ResponseEntity<?> createReview(
             @PathVariable Integer bookId,
             @RequestBody Map<String, Object> reviewData,
-            @AuthenticationPrincipal UserDetails userDetails)
-    {
-        String email = userDetails.getUsername();
-        Customer customer = customerService.findByEmail(email);
-
-        Book book = bookService.findById(bookId).orElse(null);
-        if (book == null) {
-            return ResponseEntity.badRequest().body("Book not found.");
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        try {
+            Review savedReview = reviewService.createReview(bookId, reviewData, userDetails.getUsername());
+            return ResponseEntity.ok(Map.of("reviewId", savedReview.getReviewId()));
+        } catch (IllegalArgumentException e) {
+            // np. jeśli brak ratingu lub commentPl, lub nie ma takiej książki
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        String commentPl = (String) reviewData.get("commentPl");
-        Integer rating = (Integer) reviewData.get("rating");
-
-        if (commentPl == null) {
-            return ResponseEntity.badRequest().body("Comment is required.");
-        }
-        if (rating == null) {
-            return ResponseEntity.badRequest().body("Rating is required.");
-        }
-
-        Review review = new Review();
-        review.setBook(book);
-        review.setCustomer(customer);
-        review.setRating(rating);
-        review.setComment(commentPl);
-        review.setReviewDate(LocalDateTime.now());
-        review.setCreatedAt(LocalDateTime.now());
-
-        Review savedReview = reviewService.save(review);
-
-        return ResponseEntity.ok(Map.of("reviewId", savedReview.getReviewId()));
     }
 
     @GetMapping("/{bookId}/me")
     public ResponseEntity<ReviewDTO> getUserReview(
             @PathVariable Integer bookId,
-            @AuthenticationPrincipal UserDetails userDetails)
-    {
-        String email = userDetails.getUsername();
-        Customer customer = customerService.findByEmail(email);
-        Book book = bookService.findById(bookId).orElse(null);
-
-        if (book == null) {
-            return ResponseEntity.badRequest().body(null);
-        }
-
-        Review review = reviewService.findByBookAndCustomer(book, customer);
-        if (review == null) {
-            return ResponseEntity.notFound().build();
-        }
-        System.out.println("Review found: " + review.getComment());
-        return ResponseEntity.ok(new ReviewDTO(review));
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return reviewService.getUserReviewDTO(bookId, userDetails.getUsername())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{bookId}/{reviewId}")
@@ -111,85 +63,68 @@ public class ReviewController {
             @PathVariable Integer bookId,
             @PathVariable Integer reviewId,
             @RequestBody Map<String, Object> reviewData,
-            @AuthenticationPrincipal UserDetails userDetails)
-    {
-        String email = userDetails.getUsername();
-        Customer customer = customerService.findByEmail(email);
-
-        Review existingReview = reviewService.findById(reviewId).orElse(null);
-        if (existingReview == null) {
-            return ResponseEntity.notFound().build();
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        try {
+            Review updatedReview = reviewService.updateReview(bookId, reviewId, reviewData, userDetails.getUsername());
+            return ResponseEntity.ok(new ReviewDTO(updatedReview));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
-
-        if (!existingReview.getCustomer().getCustomerId().equals(customer.getCustomerId())) {
-            return ResponseEntity.status(403).body("You are not authorized to update this review.");
-        }
-
-        if (!existingReview.getBook().getBookId().equals(bookId)) {
-            return ResponseEntity.badRequest().body("Review does not belong to the specified book.");
-        }
-
-        String commentPl = (String) reviewData.get("commentPl");
-        Integer rating = (Integer) reviewData.get("rating");
-
-        if (commentPl != null) existingReview.setComment(commentPl);
-        if (rating != null) existingReview.setRating(rating);
-
-        Review updatedReview = reviewService.save(existingReview);
-
-        return ResponseEntity.ok(new ReviewDTO(updatedReview));
     }
 
     @GetMapping("/book-reviews/{bookId}")
     public ResponseEntity<List<ReviewDTO>> getBookReviews(@PathVariable Integer bookId) {
-        Book book = bookService.findById(bookId).orElse(null);
-
-        if (book == null) {
-            return ResponseEntity.badRequest().body(null);
+        try {
+            List<ReviewDTO> reviewDTOs = reviewService.getReviewsDTOByBookId(bookId);
+            return ResponseEntity.ok(reviewDTOs);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         }
-
-        List<Review> reviews = reviewService.findByBook(book);
-
-        List<ReviewDTO> reviewDTOs = reviews.stream()
-                .map(ReviewDTO::new)
-                .toList();
-        return ResponseEntity.ok(reviewDTOs);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteReview(
             @PathVariable Integer id,
-            @AuthenticationPrincipal UserDetails userDetails)
-    {
-        String email = userDetails.getUsername();
-        Customer customer = customerService.findByEmail(email);
-        Review existingReview = reviewService.findById(id).orElse(null);
-
-        if (existingReview == null) {
-            return ResponseEntity.notFound().build();
-        }
-
-        if (!existingReview.getCustomer().getCustomerId().equals(customer.getCustomerId())) {
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        try {
+            reviewService.deleteReviewById(id, userDetails.getUsername());
+            return ResponseEntity.noContent().build();
+        } catch (SecurityException e) {
             return ResponseEntity.status(403).build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         }
-
-        reviewService.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{bookId}/{reviewId}")
+    public ResponseEntity<Void> deleteReview(
+            @PathVariable Integer bookId,
+            @PathVariable Integer reviewId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        try {
+            reviewService.deleteReviewForBook(bookId, reviewId, userDetails.getUsername());
+            return ResponseEntity.noContent().build(); // 204
+        } catch (SecurityException e) {
+            // Gdy recenzja nie należy do zalogowanego użytkownika
+            return ResponseEntity.status(403).build(); // 403 Forbidden
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 400 Bad Request
+        }
+    }
+
 
     @GetMapping("/all/{bookId}")
     public ResponseEntity<List<ReviewDTO>> getReviewsByBookId(@PathVariable Integer bookId) {
-        Book book = bookService.findById(bookId).orElse(null);
-
-        if (book == null) {
-            return ResponseEntity.badRequest().body(null);
+        try {
+            List<ReviewDTO> reviewDTOs = reviewService.getReviewsDTOByBookId(bookId);
+            return ResponseEntity.ok(reviewDTOs);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         }
-
-        List<Review> reviews = reviewService.findByBook(book);
-        List<ReviewDTO> reviewDTOs = reviews.stream()
-                .map(ReviewDTO::new)
-                .toList();
-
-        return ResponseEntity.ok(reviewDTOs);
     }
 }
