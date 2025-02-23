@@ -10,5 +10,4 @@ import lombok.Setter;
 public class GenreFilterDTO {
     private Integer genreId;
     private String name;
-    private boolean isUnavailable; // Nowe pole!
 }

@@ -29,7 +29,6 @@ public class CustomerProfileMapper {
         dto.setLastName(customer.getLastName());
         dto.setPhone(customer.getPhone());
 
-        // Formatowanie daty utworzenia konta (z encji Customer)
         if (customer.getCreatedAt() != null) {
             dto.setCreatedAt(customer.getCreatedAt().format(DATE_FORMATTER));
         }
@@ -71,7 +70,6 @@ public class CustomerProfileMapper {
             dto.setCreatedAt(order.getCreatedAt().format(DATE_FORMATTER));
         }
 
-        // OrderItems
         if (order.getItems() != null) {
             logger.info("Mapping Order Items for Order ID {}: {}", order.getOrderId(), order.getItems());
             List<OrderItemDTO> itemDtos = order.getItems().stream()
@@ -95,7 +93,6 @@ public class CustomerProfileMapper {
             dto.setCreatedAt(orderItem.getCreatedAt().format(DATE_FORMATTER));
         }
 
-        // Jeśli chcesz pobrać tytuł książki
         if (orderItem.getBook() != null) {
             dto.setBookTitle(orderItem.getBook().getTitlePl());
         }
@@ -118,7 +115,6 @@ public class CustomerProfileMapper {
             dto.setCreatedAt(review.getCreatedAt().format(DATE_FORMATTER));
         }
 
-        // Tytuł książki (o ile go masz w Book)
         if (review.getBook() != null) {
             dto.setBookTitle(review.getBook().getTitlePl());
         }

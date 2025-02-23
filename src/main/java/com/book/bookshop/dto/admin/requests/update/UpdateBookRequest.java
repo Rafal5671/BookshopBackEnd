@@ -1,5 +1,6 @@
 package com.book.bookshop.dto.admin.requests.update;
 
+import com.book.bookshop.enums.CoverType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,4 +21,9 @@ public class UpdateBookRequest {
     private Integer publisherId;
     private List<Integer> authorsIds;
     private String imageUrl;
+    private Integer stockQuantity;
+    private Integer pagesCount;
+    private CoverType coverType;
+    private Integer category;
+    private List<Integer> genres;
 }

@@ -12,8 +12,8 @@ import java.util.List;
 @NoArgsConstructor
 public class PagedResponse<T> {
     private List<T> content;
-    private int pageNumber;      // numer strony
-    private int pageSize;        // ile elementów
-    private long totalElements;  // łączna liczba elementów
-    private int totalPages;      // liczba stron
+    private int pageNumber;
+    private int pageSize;
+    private long totalElements;
+    private int totalPages;
 }

@@ -8,7 +8,7 @@ public class AuthorSpecification {
     public static Specification<Author> nameContains(String query) {
         return (root, queryObj, builder) -> {
             if (query == null || query.isBlank()) {
-                return builder.conjunction(); // Brak kryterium, czyli wszystko przechodzi
+                return builder.conjunction();
             }
             String pattern = "%" + query.toLowerCase() + "%";
             return builder.or(

@@ -59,7 +59,7 @@ public class OrderService {
     // LOGIKA: CREATE ORDER
     // ------------------------
     public Object createOrder(String authHeader, Map<String, Object> orderData) throws StripeException {
-        // 1. Pobranie użytkownika (jeśli token jest podany)
+
         Customer customer = null;
         OrderType orderType = OrderType.GUEST_USER;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -71,8 +71,7 @@ public class OrderService {
             }
         }
 
-        // 2. Zapis adresu (z mapy orderData)
-        @SuppressWarnings("unchecked")
+
         Map<String, String> addressData = (Map<String, String>) orderData.get("address");
         if (addressData == null) {
             return "Brak adresu w zamówieniu.";
@@ -84,7 +83,7 @@ public class OrderService {
         address.setCountry(addressData.get("country"));
         Address savedAddress = addressRepository.save(address);
 
-        // 3. Utworzenie obiektu zamówienia (bez pozycji)
+
         Order order = new Order();
         order.setCustomer(customer);
         order.setStatus(OrderStatus.PENDING);
@@ -92,7 +91,6 @@ public class OrderService {
         order.setAddress(savedAddress);
         order.setOrderType(orderType);
 
-        // 3a. Ustawienie metody płatności
         if (orderData.containsKey("paymentMethod")) {
             String paymentMethodStr = orderData.get("paymentMethod").toString().toUpperCase();
             if ("ONLINE".equals(paymentMethodStr)) {
@@ -106,8 +104,6 @@ public class OrderService {
             order.setPaymentMethod(PaymentMethod.STRIPE);
         }
 
-        // 4. Pobieramy listę pozycji (books + quantity) i obliczamy łączną kwotę
-        @SuppressWarnings("unchecked")
         List<Map<String, Object>> items = (List<Map<String, Object>>) orderData.get("items");
         if (items == null || items.isEmpty()) {
             return "Brak pozycji w zamówieniu.";
@@ -125,10 +121,8 @@ public class OrderService {
         }
         order.setAmount(computedTotal);
 
-        // 5. Zapis zamówienia (bez pozycji)
         Order savedOrder = orderRepository.save(order);
 
-        // 6. Tworzenie i zapisywanie OrderItem
         for (Map<String, Object> itemData : items) {
             int bookId = (Integer) itemData.get("bookId");
             int quantity = (Integer) itemData.get("quantity");
@@ -144,7 +138,6 @@ public class OrderService {
             orderItemService.save(item);
         }
 
-        // 7. Jeśli płatność online → utwórz sesję Stripe, zwróć URL
         if (savedOrder.getPaymentMethod() == PaymentMethod.STRIPE) {
             Stripe.apiKey = stripeSecretKey;
             long amountInCents = savedOrder.getAmount()
@@ -183,7 +176,6 @@ public class OrderService {
                     "url", session.getUrl()
             );
         } else {
-            // 8. Jeśli płatność gotówką → nie tworzymy sesji
             return Map.of("orderId", String.valueOf(savedOrder.getOrderId()));
         }
     }
@@ -198,13 +190,10 @@ public class OrderService {
         }
         Order existingOrder = existingOpt.get();
 
-        // Ustawiamy tylko pola, które chcesz umożliwić do edycji (np. status)
         existingOrder.setStatus(updatedData.getStatus());
         existingOrder.setOrderType(updatedData.getOrderType());
         existingOrder.setPaymentStatus(updatedData.getPaymentStatus());
         existingOrder.setPaymentMethod(updatedData.getPaymentMethod());
-
-        // itd. – w zależności od potrzeb
 
         return Optional.of(orderRepository.save(existingOrder));
     }

@@ -24,6 +24,6 @@ public class Genre {
     private List<Book> books;
 
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false) // Ensures all genres have categories
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 }

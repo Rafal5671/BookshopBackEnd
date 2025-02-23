@@ -4,13 +4,11 @@ public class GenreDTO {
     private Integer genreId;
     private String name;
 
-    // Constructor
     public GenreDTO(Integer genreId, String name) {
         this.genreId = genreId;
         this.name = name;
     }
 
-    // Getters and Setters
     public Integer getGenreId() {
         return genreId;
     }

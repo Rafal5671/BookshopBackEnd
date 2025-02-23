@@ -294,11 +294,9 @@ public class AdminController {
             @RequestParam(defaultValue = "10") int size
     ) {
         System.out.println("Email param: " + email);
-        // Jeśli email jest niepusty, odpalamy wyszukiwanie po emailu
         if (email != null && !email.trim().isEmpty()) {
             return adminService.getRefreshTokensByEmailPaged(email, page, size);
         } else {
-            // W przeciwnym razie zwracamy wszystkie tokeny (paginowane)
             return adminService.getAllRefreshTokensPaged(page, size);
         }
     }

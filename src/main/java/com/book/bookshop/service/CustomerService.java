@@ -17,12 +17,9 @@ public class CustomerService {
     @Autowired
     private PasswordService passwordService;
     public Customer registerCustomer(Customer customer) {
-        // Hashujemy hasło
         String hashedPassword = passwordService.hashPassword(customer.getPassword());
         customer.setPassword(hashedPassword);
-        // Ustawiamy domyślną rolę
         customer.setRole(UserRole.ROLE_USER);
-        // Zapisujemy nowego klienta
         return customerRepository.save(customer);
     }
     public List<Customer> findAll() {
@@ -46,7 +43,6 @@ public class CustomerService {
     }
     @Transactional
     public Customer loadFullProfile(String email) {
-        // Zapytanie z JOIN FETCH
         return customerRepository.findByEmailWithOrdersAndReviews(email);
     }
 }

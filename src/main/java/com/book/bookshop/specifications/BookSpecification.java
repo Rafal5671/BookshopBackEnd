@@ -10,38 +10,11 @@ import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 public class BookSpecification {
 
-    /*public static Specification<Book> titleContains(String search) {
-        return (root, query, builder) -> {
-            if (search == null || search.trim().isEmpty()) {
-                return null;
-            }
-            String likePattern = "%" + search.toLowerCase() + "%";
-            return builder.or(
-                    builder.like(builder.lower(root.get("titlePl")), likePattern),
-                    builder.like(builder.lower(root.get("titleEn")), likePattern),
-                    builder.like(builder.lower(root.get("originalTitle")), likePattern)
-            );
-        };
-    }
-
-    public static Specification<Book> authorContains(String search) {
-        return (root, query, builder) -> {
-            if (search == null || search.trim().isEmpty()) {
-                return null;
-            }
-            // Dołączenie tabeli autorów
-            Join<Book, Author> authors = root.join("authors", JoinType.LEFT);
-            String likePattern = "%" + search.toLowerCase() + "%";
-            return builder.or(
-                    builder.like(builder.lower(authors.get("firstName")), likePattern),
-                    builder.like(builder.lower(authors.get("lastName")), likePattern)
-            );
-        };
-    }*/
     public static Specification<Book> titleContains(String search) {
         return (root, query, builder) -> {
             if (search == null || search.isEmpty()) {
@@ -76,7 +49,7 @@ public class BookSpecification {
             return predicate;
         };
     }
-    // Inne specyfikacje...
+
     public static Specification<Book> hasGenre(Integer genreId) {
         return (root, query, builder) -> {
             if (genreId == null) {
@@ -99,13 +72,13 @@ public class BookSpecification {
             if (genreIds == null || genreIds.isEmpty()) {
                 return builder.conjunction();
             }
-            query.distinct(true); // Zapewnia unikalne wyniki
+            query.distinct(true);
             Join<Book, Genre> genres = root.join("genres", JoinType.INNER);
             return genres.get("genreId").in(genreIds);
         };
     }
 
-    // Specyfikacja do filtrowania po kategoriach
+
     public static Specification<Book> hasCategories(List<Integer> categoryIds) {
         return (root, query, builder) -> {
             if (categoryIds == null || categoryIds.isEmpty()) {
@@ -137,18 +110,28 @@ public class BookSpecification {
             if (authorIds == null || authorIds.isEmpty()) {
                 return criteriaBuilder.conjunction();
             }
-            query.distinct(true); // 🔥 Zapewnia unikalne wyniki
+            query.distinct(true);
             Join<Book, Author> authorJoin = root.join("authors", JoinType.INNER);
             return authorJoin.get("authorId").in(authorIds);
         };
     }
 
     public static Specification<Book> isOnSale(Boolean onSale) {
-        return (root, query, builder) -> {
-            if (onSale == null) {
-                return null;
-            }
-            return builder.equal(root.get("onSale"), onSale);
-        };
+        if (onSale == null || !onSale) {
+            return null;
+        }
+        return (root, query, builder) -> builder.isNotNull(root.get("discountPrice"));
     }
+    public static Specification<Book> isNew(Boolean isNew) {
+        if (isNew == null || !isNew) {
+            return null;
+        }
+
+        LocalDate oneYearAgo = LocalDate.now().minusYears(1);
+
+        return (root, query, builder) -> builder.greaterThanOrEqualTo(
+                root.get("releaseDate"), java.sql.Date.valueOf(oneYearAgo)
+        );
+    }
+
 }

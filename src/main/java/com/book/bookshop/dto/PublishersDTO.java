@@ -10,7 +10,6 @@ public class PublishersDTO {
         this.name = name;
     }
 
-    // gettery i settery
     public Integer getPublisherId() {
         return publisherId;
     }

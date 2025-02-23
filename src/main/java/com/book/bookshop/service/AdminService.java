@@ -97,10 +97,9 @@ public class AdminService {
             book.setOriginalTitle(request.getOriginalTitle());
             book.setPrice(request.getPrice());
             book.setDiscountPrice(request.getSalePrice());
-            book.setStockQuantity(10);
-            book.setCoverType(CoverType.HARD);
             book.setLanguage(LanguageBook.POLISH);
-
+            book.setStockQuantity(request.getStockQuantity());
+            book.setCoverType(request.getCoverType());
             // Ustawienie wydawcy
             Optional<Publisher> publisherOpt = publisherRepository.findById(request.getPublisherId());
             if (publisherOpt.isEmpty()) {
@@ -127,7 +126,18 @@ public class AdminService {
             if (request.getImageUrl() != null) {
                 book.setImageUrl(request.getImageUrl());
             }
-
+            Optional<Category> categoryOpt = categoryRepository.findById(request.getCategory());
+            if (categoryOpt.isEmpty()) {
+                return Map.of("message", "Nie znaleziono kategorii o podanym ID.");
+            }
+            if (request.getGenres() != null && !request.getGenres().isEmpty()) {
+                List<Genre> genres = genreRepository.findAllById(request.getGenres());
+                if (genres.size() != request.getGenres().size()) {
+                    return Map.of("message", "Jeden lub więcej gatunków nie zostało znalezionych.");
+                }
+                book.setGenres(genres);
+            }
+            book.setCategory(categoryOpt.get());
             Book savedBook = bookRepository.save(book);
             return convertToDTO(savedBook);
 
@@ -146,7 +156,6 @@ public class AdminService {
             }
             Book book = bookOpt.get();
 
-            // Aktualizacja pól
             if (request.getTitlePL() != null && !request.getTitlePL().isEmpty()) {
                 book.setTitlePl(request.getTitlePL());
             }
@@ -194,6 +203,35 @@ public class AdminService {
                 book.setImageUrl(request.getImageUrl());
             }
 
+            if (request.getStockQuantity() != null) {
+                book.setStockQuantity(request.getStockQuantity());
+            }
+
+            if (request.getPagesCount() != null) {
+                book.setPagesCount(request.getPagesCount());
+            }
+
+            if (request.getCoverType() != null) {
+                book.setCoverType(request.getCoverType());
+            }
+
+            if (request.getCategory() != null) {
+                Optional<Category> categoryOpt = categoryRepository.findById(request.getCategory());
+                if (categoryOpt.isEmpty()) {
+                    return Map.of("message", "Nie znaleziono kategorii o podanym ID.");
+                }
+                book.setCategory(categoryOpt.get());
+            }
+
+            if (request.getGenres() != null && !request.getGenres().isEmpty()) {
+                System.out.println(request.getGenres());
+                List<Genre> genres = genreRepository.findAllById(request.getGenres());
+                if (genres.size() != request.getGenres().size()) {
+                    return Map.of("message", "Jeden lub więcej gatunków nie zostało znalezionych.");
+                }
+                book.setGenres(genres);
+            }
+
             Book updatedBook = bookRepository.save(book);
             return convertToDTO(updatedBook);
 
@@ -202,6 +240,7 @@ public class AdminService {
             return Map.of("message", "Wystąpił błąd podczas aktualizacji produktu.");
         }
     }
+
 
     // 1d) Usunięcie produktu
     public Object deleteProduct(Integer id) {

@@ -1,5 +1,6 @@
 package com.book.bookshop.dto.admin.requests.create;
 
+import com.book.bookshop.enums.CoverType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -35,5 +36,16 @@ public class CreateBookRequestDTO {
     private List<Integer> authorsIds;
     @NotBlank
     private String imageUrl;
+    @NotNull
+    private Integer category;
+    @NotEmpty
+    private List<Integer> genres;
+    @NotNull
+    private Integer stockQuantity;
+    @NotNull
+    private Integer pagesCount;
+    @NotNull
+    private CoverType coverType;
+
 }
 

@@ -43,7 +43,6 @@ public class ReviewController {
             Review savedReview = reviewService.createReview(bookId, reviewData, userDetails.getUsername());
             return ResponseEntity.ok(Map.of("reviewId", savedReview.getReviewId()));
         } catch (IllegalArgumentException e) {
-            // np. jeśli brak ratingu lub commentPl, lub nie ma takiej książki
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -110,7 +109,6 @@ public class ReviewController {
             reviewService.deleteReviewForBook(bookId, reviewId, userDetails.getUsername());
             return ResponseEntity.noContent().build(); // 204
         } catch (SecurityException e) {
-            // Gdy recenzja nie należy do zalogowanego użytkownika
             return ResponseEntity.status(403).build(); // 403 Forbidden
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build(); // 400 Bad Request

@@ -15,7 +15,6 @@ public class AuthorController {
     @Autowired
     private AuthorService authorService;
 
-    // 1. Pobranie strony autorów (z paginacją i sortowaniem)
     @GetMapping
     public ResponseEntity<Page<Author>> getAuthorsPage(
             @RequestParam(defaultValue = "0") int page,
@@ -25,7 +24,6 @@ public class AuthorController {
         return ResponseEntity.ok(authorsPage);
     }
 
-    // 2. Pobranie autora po ID
     @GetMapping("/{id}")
     public ResponseEntity<Author> getAuthorById(@PathVariable Integer id) {
         return authorService.getAuthorById(id)
@@ -33,7 +31,6 @@ public class AuthorController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // 3. Dodanie (utworzenie) nowego autora
     @PostMapping
     public ResponseEntity<Author> createAuthor(@RequestBody Author author) {
         Author savedAuthor = authorService.createAuthor(author);
@@ -41,7 +38,6 @@ public class AuthorController {
         return ResponseEntity.ok(savedAuthor);
     }
 
-    // 4. Usunięcie autora
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAuthor(@PathVariable Integer id) {
         boolean deleted = authorService.deleteAuthor(id);

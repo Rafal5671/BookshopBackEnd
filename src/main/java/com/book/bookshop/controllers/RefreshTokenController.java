@@ -31,49 +31,38 @@ public class RefreshTokenController {
     public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
         String requestToken = request.getRefreshToken();
 
-        // Najpierw szukamy RefreshToken w bazie (Optional)
         Optional<RefreshToken> optionalRefToken = refreshTokenService.findByToken(requestToken);
 
         if (optionalRefToken.isEmpty()) {
-            // Brak takiego tokena w bazie → 401
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Nie znaleziono takiego Refresh Tokena. Zaloguj się ponownie.");
         }
 
-        // Jeśli jest, to pobieramy
         RefreshToken refToken = optionalRefToken.get();
 
-        // Wywołujemy metodę pomocniczą, która zwróci obiekt ResponseEntity (sukces lub błąd)
         return processRefreshToken(refToken);
     }
 
     private ResponseEntity<?> processRefreshToken(RefreshToken refToken) {
-        // 1. Sprawdzamy, czy token wygasł
         if (!refreshTokenService.verifyExpiration(refToken)) {
-            // Jeżeli wygasł, RefreshToken zostanie usunięty,
-            // a my zwracamy 401
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Refresh token wygasł i został usunięty. Zaloguj się ponownie.");
         }
 
-        // 2. Sprawdzenie, czy nie jest unieważniony (revoked)
         if (refToken.isRevoked()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Refresh token unieważniony. Zaloguj się ponownie.");
         }
 
-        // 3. Pobieramy użytkownika po emailu z tokena
         Customer customer = customerRepository.findByEmail(refToken.getEmail());
         if (customer == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Nie znaleziono użytkownika. Zaloguj się ponownie.");
         }
 
-        // 4. Generujemy nowy accessToken
         String role = customer.getRole().toString();
         String newAccessToken = jwtUtil.generateToken(refToken.getEmail(), role);
 
-        // 5. Zwracamy 200 OK wraz z nowym tokenem
         return ResponseEntity.ok(new RefreshTokenResponse(newAccessToken));
     }
 

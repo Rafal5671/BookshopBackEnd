@@ -14,7 +14,6 @@ public class SecurityConfig {
 
     private final JwtRequestFilter jwtRequestFilter;
 
-    // Wstrzykujemy filtr JWT
     public SecurityConfig(JwtRequestFilter jwtRequestFilter) {
         this.jwtRequestFilter = jwtRequestFilter;
     }
@@ -25,38 +24,23 @@ public class SecurityConfig {
                 .cors().and()
                 .csrf().disable()
                 .authorizeRequests()
-                .requestMatchers("/api/customers/login", "/api/customers/register", "/api/books","/api/books/search", "/api/books/search/*","/api/books/*","/api/books/genre","/api/books/genre/**", "/api/orders").permitAll()
-                .requestMatchers("/api/reviews/all/*").permitAll()
-                .requestMatchers("/api/books/aggregated").permitAll()
-                .requestMatchers("/api/reviews/all/").permitAll()
-                .requestMatchers("/api/authors/**").permitAll()
-                .requestMatchers("/api/authors/*").permitAll()
-                .requestMatchers("/api/authors/").permitAll()
-                .requestMatchers("/api/publishers/**").permitAll()
-                .requestMatchers("/api/publishers/*").permitAll()
-                .requestMatchers("/api/publishers/").permitAll()
-                .requestMatchers("/api/reviews/all/**").permitAll()
-                .requestMatchers("/api/reviews/*").permitAll()
-                .requestMatchers("/api/reviews/").permitAll()
-                .requestMatchers("/api/reviews/**").permitAll()
-                .requestMatchers("/api/refresh/").permitAll()
-                .requestMatchers("/api/refresh/**").permitAll()
-                .requestMatchers("/api/refresh/refresh").permitAll()
-                .requestMatchers("/api/reviews/book-reviews/*").permitAll()
-                .requestMatchers("/api/reviews/book-reviews/").permitAll()
-                .requestMatchers("/api/reviews/book-reviews/**").permitAll()
-                .requestMatchers("/api/categories/").permitAll()
-                .requestMatchers("/api/categories/**").permitAll()
-                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/admin/publishers/**").hasAnyRole("ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/admin/products/**").hasAnyRole("ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/admin/categories/**").hasAnyRole("ADMIN", "EMPLOYEE")
-                .requestMatchers("/api/admin/statistics").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers(
+                        "/api/customers/login",
+                        "/api/customers/register",
+                        "/api/books/**",
+                        "/api/authors/**",
+                        "/api/publishers/**",
+                        "/api/categories/**",
+                        "/api/reviews/**",
+                        "/api/refresh/**",
+                        "/api/orders/**"
+                ).permitAll()
                 .requestMatchers("/api/admin/refresh-tokens").hasAnyRole("ADMIN")
-                .requestMatchers("/api/customers/me").authenticated() // Endpointy chronione wymagające autoryzacji
+                .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers("/api/customers/me").authenticated()
                 .anyRequest().authenticated()
                 .and()
-                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class); // Dodanie filtra JWT przed standardowym filtrem
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

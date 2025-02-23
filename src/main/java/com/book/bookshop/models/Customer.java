@@ -43,7 +43,6 @@ public class Customer {
     }
 
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Zwracamy np. jedną rolę w kolekcji
         return Collections.singletonList(role);
     }
 }

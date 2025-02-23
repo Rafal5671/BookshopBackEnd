@@ -25,14 +25,13 @@ import java.util.List;
 public class BooksController {
 
     @Autowired
-    private BookService bookService; // Usunęliśmy bezpośrednie korzystanie z BookRepository
+    private BookService bookService;
 
     @GetMapping("/{id}")
     public ResponseEntity<BookDTO> getBookById(
             @PathVariable Integer id,
             @RequestParam(defaultValue = "pl") String lang
     ) {
-        // Cała logika jest w serwisie
         return bookService.getBookByIdDTO(id, lang)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body(null));
@@ -40,7 +39,6 @@ public class BooksController {
 
     @GetMapping("/genres")
     public List<GenreDTO> getAllGenres() {
-        // W serwisie mamy getAllGenres()
         return bookService.getAllGenresDTO();
     }
 
@@ -73,6 +71,7 @@ public class BooksController {
             @RequestParam(required = false) BigDecimal priceMin,
             @RequestParam(required = false) BigDecimal priceMax,
             @RequestParam(required = false) Boolean onSale,
+            @RequestParam(value = "new", required = false) Boolean isNew,
             @RequestParam(defaultValue = "titleAsc") String sortBy,
             @RequestParam(defaultValue = "asc") String order,
             @RequestParam(defaultValue = "1") int page,
@@ -80,7 +79,7 @@ public class BooksController {
             @RequestParam(defaultValue = "pl") String lang
     ) {
         try {
-            // 1. Zbudowanie Specification na podstawie parametrów
+            // 1. Zbudowanie Specification
             Specification<Book> spec = Specification.where(BookSpecification.titleContains(search))
                     .or(BookSpecification.authorContains(search))
                     .and(BookSpecification.hasGenres(genreId))
@@ -88,9 +87,10 @@ public class BooksController {
                     .and(BookSpecification.hasAuthors(authorId))
                     .and(BookSpecification.priceGreaterThanOrEqualTo(priceMin))
                     .and(BookSpecification.priceLessThanOrEqualTo(priceMax))
-                    .and(BookSpecification.isOnSale(onSale));
+                    .and(BookSpecification.isOnSale(onSale))
+                    .and(BookSpecification.isNew(isNew));
 
-            // 2. Wywołanie serwisu, który zwróci PaginatedResponse
+            // 2. Wywołanie serwisu
             PaginatedBooksResponse response = bookService.getBooks(spec, sortBy, order, page, limit, lang);
 
             // 3. Zwracamy wynik
@@ -111,8 +111,9 @@ public class BooksController {
             @RequestParam(required = false) BigDecimal priceMin,
             @RequestParam(required = false) BigDecimal priceMax,
             @RequestParam(required = false) Boolean onSale,
-            @RequestParam(defaultValue = "pl") String lang
-    ) {
+            @RequestParam(defaultValue = "pl") String lang,
+            @RequestParam(value = "new", required = false) Boolean isNew
+            ) {
         try {
             Specification<Book> spec = Specification.where(BookSpecification.titleContains(search))
                     .or(BookSpecification.authorContains(search))
@@ -121,7 +122,8 @@ public class BooksController {
                     .and(BookSpecification.hasAuthors(authorId))
                     .and(BookSpecification.priceGreaterThanOrEqualTo(priceMin))
                     .and(BookSpecification.priceLessThanOrEqualTo(priceMax))
-                    .and(BookSpecification.isOnSale(onSale));
+                    .and(BookSpecification.isOnSale(onSale))
+                    .and(BookSpecification.isNew(isNew));
 
             AggregatedFilterData data = bookService.buildAggregatedFilterData(spec, lang);
 
@@ -136,7 +138,6 @@ public class BooksController {
     @GetMapping("/random")
     public ResponseEntity<?> getRandomBooks() {
         try {
-            // W serwisie losujemy i zwracamy listę
             List<BookDTO> randomBooksDto = bookService.getRandomBooksDTO("pl");
             return ResponseEntity.ok(randomBooksDto);
 

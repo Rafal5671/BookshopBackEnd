@@ -42,15 +42,12 @@ public class AuthorService {
     }
 
     public Author createAuthor(Author author) {
-        // Możesz dodać tutaj dodatkową logikę walidacji
-        // (np. sprawdzić, czy nie istnieje już autor o danym imieniu/nazwisku).
         return authorRepository.save(author);
     }
 
     public boolean deleteAuthor(Integer id) {
         Optional<Author> authorOpt = authorRepository.findById(id);
         if (authorOpt.isEmpty()) {
-            // Autor nie istnieje
             return false;
         }
         authorRepository.deleteById(id);
